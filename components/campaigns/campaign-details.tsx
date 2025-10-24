@@ -304,7 +304,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
               {/* Stats Cards Skeleton */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-32 bg-muted/50 rounded-xl animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-32 bg-muted/50 rounded-xl animate-pulse"
+                  />
                 ))}
               </div>
 
@@ -347,15 +350,12 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
 
           <h1 className="text-2xl font-bold mb-3">Campaign Not Found</h1>
           <p className="text-muted-foreground mb-8">
-            {campaignError || "We couldn't find the campaign you're looking for. It may have been removed or the link is incorrect."}
+            {campaignError ||
+              "We couldn't find the campaign you're looking for. It may have been removed or the link is incorrect."}
           </p>
 
           <div className="space-y-4">
-            <Button
-              onClick={fetchCampaignData}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={fetchCampaignData} className="w-full" size="lg">
               Try Again
             </Button>
             <Button
@@ -538,10 +538,16 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     : "bg-blue-500/20 text-blue-100 border-blue-400/30"
                 )}
               >
-                {campaign.status === "funded" && <Trophy className="w-3 h-3 mr-1" />}
-                {campaign.status === "ending-soon" && <Clock className="w-3 h-3 mr-1" />}
-                {campaign.status === "active" && <Zap className="w-3 h-3 mr-1" />}
-                {campaign.status.replace('-', ' ')}
+                {campaign.status === "funded" && (
+                  <Trophy className="w-3 h-3 mr-1" />
+                )}
+                {campaign.status === "ending-soon" && (
+                  <Clock className="w-3 h-3 mr-1" />
+                )}
+                {campaign.status === "active" && (
+                  <Zap className="w-3 h-3 mr-1" />
+                )}
+                {campaign.status.replace("-", " ")}
               </Badge>
             </div>
 
@@ -558,9 +564,14 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-white">
-                    <h3 className="font-semibold text-lg">{campaign.creatorName}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {campaign.creatorName}
+                    </h3>
                     <div className="flex items-center gap-2 text-sm text-white/80">
-                      <span>{campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
+                      <span>
+                        {campaign.creator.slice(0, 6)}...
+                        {campaign.creator.slice(-4)}
+                      </span>
                       <Shield className="w-3 h-3" />
                       <span>Verified Creator</span>
                     </div>
@@ -589,8 +600,14 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     size="sm"
                     className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white border-white/30 transition-all duration-300 hover:scale-105"
                     onClick={() => {
-                      if (campaign.contractAddress && campaign.contractAddress !== "undefined") {
-                        window.open(`https://sepolia.etherscan.io/address/${campaign.contractAddress}`, '_blank');
+                      if (
+                        campaign.contractAddress &&
+                        campaign.contractAddress !== "undefined"
+                      ) {
+                        window.open(
+                          `https://sepolia.etherscan.io/address/${campaign.contractAddress}`,
+                          "_blank"
+                        );
                       }
                     }}
                   >
@@ -613,7 +630,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Current Price</p>
+                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                        Current Price
+                      </p>
                       <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                         {campaign.currentPrice} {campaign.currency}
                       </p>
@@ -629,7 +648,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Total Raised</p>
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                        Total Raised
+                      </p>
                       <p className="text-2xl font-bold text-green-900 dark:text-green-100">
                         {campaign.totalRaised} {campaign.currency}
                       </p>
@@ -645,7 +666,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Supporters</p>
+                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">
+                        Supporters
+                      </p>
                       <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                         {campaign.supporters}
                       </p>
@@ -671,12 +694,18 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   <Progress value={progress} className="h-4" />
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Current Supporters</span>
-                      <p className="font-semibold text-lg">{campaign.supporters}</p>
+                      <span className="text-muted-foreground">
+                        Current Supporters
+                      </span>
+                      <p className="font-semibold text-lg">
+                        {campaign.supporters}
+                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-muted-foreground">Goal</span>
-                      <p className="font-semibold text-lg">{campaign.minRequiredSales}</p>
+                      <p className="font-semibold text-lg">
+                        {campaign.minRequiredSales}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
@@ -735,7 +764,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       {campaign.longDescription
                         .split("\n")
                         .map((paragraph, index) => (
-                          <p key={index} className="mb-4 last:mb-0 text-base leading-relaxed">
+                          <p
+                            key={index}
+                            className="mb-4 last:mb-0 text-base leading-relaxed"
+                          >
                             {paragraph}
                           </p>
                         ))}
@@ -797,7 +829,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   <CardContent>
                     <div className="space-y-6">
                       {campaign.milestones.map((milestone, index) => (
-                        <div key={index} className="flex items-start gap-4 group">
+                        <div
+                          key={index}
+                          className="flex items-start gap-4 group"
+                        >
                           <div className="relative">
                             {milestone.completed ? (
                               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-500">
@@ -816,7 +851,8 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                             <h4
                               className={cn(
                                 "font-medium text-lg mb-1",
-                                milestone.completed && "text-green-700 dark:text-green-400"
+                                milestone.completed &&
+                                  "text-green-700 dark:text-green-400"
                               )}
                             >
                               {milestone.title}
@@ -825,7 +861,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                               {milestone.date}
                             </p>
                             {milestone.completed && (
-                              <Badge variant="secondary" className="mt-2 text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="mt-2 text-xs"
+                              >
                                 Completed
                               </Badge>
                             )}
@@ -877,7 +916,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                                 {supporter.amount} {campaign.currency}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(supporter.timestamp), "MMM dd, yyyy")}
+                                {format(
+                                  new Date(supporter.timestamp),
+                                  "MMM dd, yyyy"
+                                )}
                               </p>
                             </div>
                           </div>
@@ -886,7 +928,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     ) : (
                       <div className="text-center py-12">
                         <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No supporters yet. Be the first!</p>
+                        <p className="text-muted-foreground">
+                          No supporters yet. Be the first!
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -907,7 +951,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   <CardContent>
                     <div className="text-center py-12">
                       <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-2">No updates yet</p>
+                      <p className="text-muted-foreground mb-2">
+                        No updates yet
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         Check back soon for the latest news from the creator
                       </p>
@@ -926,7 +972,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                 <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Current Price</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Current Price
+                      </p>
                       <p className="text-3xl font-bold text-primary">
                         {campaign.currentPrice}
                         <span className="text-lg text-muted-foreground ml-1">
@@ -943,7 +991,12 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   <div className="flex items-center gap-2 text-sm">
                     <ArrowUpRight className="w-4 h-4 text-green-500" />
                     <span className="text-green-600 dark:text-green-400">
-                      Next: {(parseFloat(campaign.currentPrice) + Number(campaign.currentPrice) * 0.1).toFixed(2)} {campaign.currency}
+                      Next:{" "}
+                      {(
+                        parseFloat(campaign.currentPrice) +
+                        Number(campaign.currentPrice) * 0.1
+                      ).toFixed(2)}{" "}
+                      {campaign.currency}
                     </span>
                   </div>
                 </div>
@@ -952,20 +1005,28 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   {/* Progress Section */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Campaign Progress</span>
+                      <span className="text-sm font-medium">
+                        Campaign Progress
+                      </span>
                       <Badge variant="outline">{Math.round(progress)}%</Badge>
                     </div>
                     <Progress value={progress} className="h-3" />
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-lg font-bold">{campaign.supporters}</p>
-                        <p className="text-xs text-muted-foreground">Supporters</p>
+                        <p className="text-lg font-bold">
+                          {campaign.supporters}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supporters
+                        </p>
                       </div>
                       <div className="p-3 rounded-lg bg-muted/50">
                         <p className="text-lg font-bold">
                           {timeRemaining.replace("in ", "").split(" ")[0]}
                         </p>
-                        <p className="text-xs text-muted-foreground">Days Left</p>
+                        <p className="text-xs text-muted-foreground">
+                          Days Left
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -975,17 +1036,25 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   {/* Campaign Stats */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Total Raised</span>
+                      <span className="text-sm text-muted-foreground">
+                        Total Raised
+                      </span>
                       <span className="font-semibold">
                         {campaign.totalRaised} {campaign.currency}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Max Supply</span>
-                      <span className="font-semibold">{campaign.maxSupply} NFTs</span>
+                      <span className="text-sm text-muted-foreground">
+                        Max Supply
+                      </span>
+                      <span className="font-semibold">
+                        {campaign.maxSupply} NFTs
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Remaining</span>
+                      <span className="text-sm text-muted-foreground">
+                        Remaining
+                      </span>
                       <span className="font-semibold">
                         {campaign.maxSupply - campaign.supporters} NFTs
                       </span>
@@ -1015,7 +1084,8 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       </>
                     ) : !campaign.contractAddress ||
                       campaign.contractAddress === "undefined" ||
-                      campaign.contractAddress === "0x0000000000000000000000000000000000000000" ? (
+                      campaign.contractAddress ===
+                        "0x0000000000000000000000000000000000000000" ? (
                       <>
                         <AlertCircle className="mr-2 h-5 w-5" />
                         Contract Not Deployed
@@ -1035,7 +1105,8 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       <div>
                         <p className="text-sm font-medium mb-1">NFT Receipt</p>
                         <p className="text-xs text-muted-foreground">
-                          You'll receive a unique NFT as proof of your support, with exclusive perks and benefits.
+                          You'll receive a unique NFT as proof of your support,
+                          with exclusive perks and benefits.
                         </p>
                       </div>
                     </div>
@@ -1052,7 +1123,8 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                             Contract Pending
                           </p>
                           <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                            Smart contract is being deployed. Check back soon to support this campaign.
+                            Smart contract is being deployed. Check back soon to
+                            support this campaign.
                           </p>
                         </div>
                       </div>
@@ -1074,11 +1146,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-12"
-                    >
+                    <Button variant="outline" size="sm" className="h-12">
                       <Heart className="w-4 h-4 mr-2" />
                       Save
                     </Button>

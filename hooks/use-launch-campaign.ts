@@ -8,7 +8,7 @@ import {
 import { parseUnits, decodeEventLog } from "viem";
 import { TOKENS } from "@/lib/wagmi";
 import FactoryABI from "@/lib/ABI/FactoryABI.json";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function useLaunchCampaign() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
@@ -20,6 +20,7 @@ export function useLaunchCampaign() {
   const publicClient = usePublicClient();
 
   const storedFormData = useRef<any>(null);
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
 
   // Validate contract address format
   const isValidContractAddress = (address: string): boolean => {
@@ -244,8 +245,10 @@ export function useLaunchCampaign() {
             storedFormData.current
           );
         })
-        .then(() => {
+        .then((result) => {
           console.log("Campaign saved to database successfully!");
+          console.log("Campaign ID:", result.id);
+          setCreatedCampaignId(result.id); // Store the campaign ID
           storedFormData.current = null; // Clear stored data
         })
         .catch((error) => {
@@ -263,8 +266,10 @@ export function useLaunchCampaign() {
             .substr(2, 8)}`;
 
           saveCampaignToDatabase(fallbackAddress, storedFormData.current)
-            .then(() => {
+            .then((result) => {
               console.log("Campaign saved with fallback address");
+              console.log("Campaign ID:", result.id);
+              setCreatedCampaignId(result.id); // Store the campaign ID from fallback
               storedFormData.current = null;
             })
             .catch((fallbackError) => {
@@ -285,5 +290,6 @@ export function useLaunchCampaign() {
     isConfirmed,
     hash,
     error,
+    createdCampaignId,
   };
 }

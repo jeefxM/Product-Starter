@@ -63,7 +63,7 @@ export function CreateCampaignForm() {
   });
   const { toast } = useToast();
   const { address, isConnected } = useAccount();
-  const { launchCampaign, isPending, isConfirming, isConfirmed, hash, error } =
+  const { launchCampaign, isPending, isConfirming, isConfirmed, hash, error, createdCampaignId } =
     useLaunchCampaign();
   const { edgestore } = useEdgeStore();
 
@@ -177,37 +177,31 @@ export function CreateCampaignForm() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handle transaction confirmation
+  // Handle transaction confirmation and redirect
   useEffect(() => {
     if (isConfirmed && hash) {
       toast({
-        title: "Campaign Created!",
+        title: "Campaign Created! 🎉",
         description:
           "Your product campaign has been successfully launched and saved.",
       });
-
-      // Reset form
-      setFormData({
-        name: "",
-        symbol: "",
-        description: "",
-        category: "",
-        fundingGoal: "",
-        maxSupply: "",
-        duration: "",
-        startingPrice: "",
-        priceIncrement: "",
-        paymentToken: "PYUSD",
-      });
-
-      // Reset image upload
-      setImageUrl("");
-      setFile(undefined);
-      setUploadProgress(0);
-
-      setLoading(false);
     }
   }, [isConfirmed, hash, toast]);
+
+  // Handle redirect when campaign ID is available
+  useEffect(() => {
+    if (createdCampaignId && isConfirmed) {
+      console.log("Redirecting to campaign details page:", createdCampaignId);
+
+      // Show success message briefly before redirecting
+      const redirectTimer = setTimeout(() => {
+        window.location.href = `/campaign/${createdCampaignId}`;
+      }, 2000); // 2 second delay to show the success message
+
+      // Cleanup timer on unmount
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [createdCampaignId, isConfirmed]);
 
   // Handle transaction errors
   useEffect(() => {
@@ -243,24 +237,6 @@ export function CreateCampaignForm() {
           </CardContent>
         </Card>
       )}
-
-      {/* Progress Indicator */}
-      <div className="flex items-center justify-center space-x-2">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">1</div>
-          <span className="text-sm font-medium">Product Info</span>
-        </div>
-        <div className="w-16 h-0.5 bg-muted"></div>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm font-medium">2</div>
-          <span className="text-sm text-muted-foreground">Funding</span>
-        </div>
-        <div className="w-16 h-0.5 bg-muted"></div>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm font-medium">3</div>
-          <span className="text-sm text-muted-foreground">Timeline</span>
-        </div>
-      </div>
 
       {/* Product Information Section */}
       <Card className="border-2 border-primary/20 hover:border-primary/30 transition-all duration-300">
