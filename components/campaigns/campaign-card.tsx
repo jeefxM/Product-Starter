@@ -4,13 +4,24 @@ import {
   Card,
   CardContent,
   CardFooter,
-  CardHeader,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, Target, TrendingUp, Gift } from "lucide-react";
+import {
+  Clock,
+  Users,
+  Target,
+  TrendingUp,
+  Gift,
+  ArrowRight,
+  ExternalLink,
+  Shield,
+  Star,
+  Zap,
+  Trophy,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -18,6 +29,7 @@ import { useSupportCampaign } from "@/hooks/use-support-campaign";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef } from "react";
 import { TokenApprovalModal } from "./token-approval-modal";
+import { cn } from "@/lib/utils";
 
 interface Campaign {
   id: string;
@@ -64,12 +76,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     addSuffix: true,
   });
 
-  const statusColors = {
-    active: "bg-green-500",
-    funded: "bg-blue-500",
-    "ending-soon": "bg-orange-500",
-  };
-
+  
   const handleSupport = async () => {
     try {
       if (isHandlingSupportRef.current) return;
@@ -162,115 +169,175 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-card/90 backdrop-blur">
-        <CardHeader className="p-0">
-          <div className="relative">
+      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur border-2 border-transparent hover:border-primary/20">
+        {/* Card Header with Image */}
+        <div className="relative">
+          <div className="relative h-56 overflow-hidden">
             <Image
               src={campaign.image || "/placeholder.svg"}
               alt={campaign.name}
-              width={300}
-              height={200}
-              className="w-full h-48 object-cover"
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              priority
             />
-            <div className="absolute top-3 left-3">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+            {/* Floating Badges */}
+            <div className="absolute top-4 left-4 flex flex-col gap-2">
               <Badge
                 variant="secondary"
-                className="backdrop-blur bg-background/80 border"
+                className="bg-white/20 backdrop-blur-md text-white border-white/30 hover:bg-white/30 transition-all duration-300"
               >
+                <Star className="w-3 h-3 mr-1" />
                 {campaign.category}
               </Badge>
-            </div>
-            <div className="absolute top-3 right-3 flex flex-col gap-2">
               {campaign.hasPerks && (
-                <Badge className="badge-gradient text-white border-0">
+                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg">
                   <Gift className="w-3 h-3 mr-1" />
-                  Perks Included
+                  Perks
                 </Badge>
               )}
-              <Badge className={`${statusColors[campaign.status]} text-white`}>
-                {campaign.status === "ending-soon"
-                  ? "Ending Soon"
-                  : campaign.status}
+            </div>
+
+            {/* Status Badge */}
+            <div className="absolute top-4 right-4">
+              <Badge
+                className={cn(
+                  "backdrop-blur-md border transition-all duration-300",
+                  campaign.status === "funded"
+                    ? "bg-green-500/20 text-green-100 border-green-400/30"
+                    : campaign.status === "ending-soon"
+                    ? "bg-orange-500/20 text-orange-100 border-orange-400/30"
+                    : "bg-blue-500/20 text-blue-100 border-blue-400/30"
+                )}
+              >
+                {campaign.status === "funded" && <Trophy className="w-3 h-3 mr-1" />}
+                {campaign.status === "ending-soon" && <Clock className="w-3 h-3 mr-1" />}
+                {campaign.status === "active" && <Zap className="w-3 h-3 mr-1" />}
+                {campaign.status === "ending-soon" ? "Ending Soon" : campaign.status}
               </Badge>
             </div>
-          </div>
-        </CardHeader>
 
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Avatar className="h-6 w-6">
+            {/* Quick Actions */}
+            <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Link href={`/campaign/${campaign.id}`}>
+                <Button
+                  size="sm"
+                  className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white border-white/30 h-8 w-8 p-0"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Content */}
+        <CardContent className="p-6">
+          {/* Creator Info */}
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar className="h-8 w-8 border-2 border-background">
               <AvatarImage src={campaign.creatorAvatar || "/placeholder.svg"} />
-              <AvatarFallback>{campaign.creator.slice(2, 4)}</AvatarFallback>
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {campaign.creator.slice(2, 4).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
-            <span className="text-sm text-muted-foreground">
-              {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}
-            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}
+              </p>
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-green-500" />
+                <span className="text-xs text-muted-foreground">Verified Creator</span>
+              </div>
+            </div>
           </div>
 
-          <h3 className="font-semibold text-lg mb-2 line-clamp-1">
+          {/* Campaign Title */}
+          <h3 className="font-bold text-xl mb-3 line-clamp-2 group-hover:text-primary transition-colors duration-300">
             {campaign.name}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+
+          {/* Description */}
+          <p className="text-muted-foreground text-sm mb-6 line-clamp-2 leading-relaxed">
             {campaign.description}
           </p>
 
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold text-primary">
-                {campaign.currentPrice} {campaign.currency}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Current Price
-              </span>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <div className="text-lg font-bold text-primary">
+                {campaign.currentPrice}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {campaign.currency}
+              </div>
             </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <div className="text-lg font-bold">{campaign.supporters}</div>
+              <div className="text-xs text-muted-foreground">Supporters</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <div className="text-lg font-bold">{Math.round(progress)}%</div>
+              <div className="text-xs text-muted-foreground">Funded</div>
+            </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>{campaign.supporters} supporters</span>
-                <span>{campaign.minRequiredSales} needed</span>
-              </div>
-              <Progress value={progress} className="h-2"></Progress>
+          {/* Progress Bar */}
+          <div className="space-y-2 mb-6">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
             </div>
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{campaign.supporters} supporters</span>
+              <span>{campaign.minRequiredSales} goal</span>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                <span>{campaign.supporters}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Target className="h-3 w-3" />
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span className="truncate">
-                  {timeRemaining.replace("in ", "")}
-                </span>
-              </div>
+          {/* Time Remaining */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 mb-6">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              <span>Time Remaining</span>
             </div>
+            <span className="text-sm font-medium">
+              {timeRemaining.replace("in ", "")}
+            </span>
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0 space-y-2">
-          <div className="w-full space-y-2">
+        {/* Card Footer */}
+        <CardFooter className="p-6 pt-0 space-y-3">
+          <Button
+            className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
+            onClick={handleSupport}
+            disabled={isPending || isConfirming}
+          >
+            {isPending || isConfirming ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                {isPending ? "Submitting..." : "Confirming..."}
+              </>
+            ) : (
+              <>
+                <TrendingUp className="mr-2 h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                Support Now
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+              </>
+            )}
+          </Button>
+
+          <Link href={`/campaign/${campaign.id}`} className="w-full">
             <Button
-              className="w-full btn-gradient"
-              onClick={handleSupport}
-              disabled={isPending || isConfirming}
+              variant="outline"
+              className="w-full h-10 font-medium transition-all duration-300 hover:bg-primary/5 group/link"
             >
-              <TrendingUp className="mr-2 h-4 w-4" />
-              {isPending
-                ? "Submitting..."
-                : isConfirming
-                ? "Confirming..."
-                : "Support Now"}
+              <ExternalLink className="mr-2 h-4 w-4 transition-transform group-hover/link:scale-110" />
+              View Details
             </Button>
-            <Link href={`/campaign/${campaign.id}`} className="w-full">
-              <Button variant="outline" className="w-full">
-                View Details
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </CardFooter>
       </Card>
 

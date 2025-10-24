@@ -2,11 +2,12 @@
 
 import { CampaignCard } from "./campaign-card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Rocket, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import CampaignNFTABI from "@/lib/ABI/CampaignNFTABI.json";
+import Link from "next/link";
 
 interface Campaign {
   id: string;
@@ -87,7 +88,7 @@ export function CampaignGrid() {
             name: campaign.name,
             creator: campaign.creatorAddress,
             description: campaign.description,
-            image: "/placeholder.svg?height=200&width=300",
+            image: campaign.imageUrl || "/placeholder.svg?height=200&width=300",
             currentPrice,
             currency: "PYUSD", // Display name instead of contract address
             supporters: 0,
@@ -127,37 +128,85 @@ export function CampaignGrid() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Failed to load campaigns
-        </h3>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <Button onClick={fetchCampaigns} variant="outline">
-          Try Again
-        </Button>
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
+        </div>
+        <h3 className="text-2xl font-bold mb-3">Failed to load campaigns</h3>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          {error || "We encountered an error while loading campaigns. Please try again."}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={fetchCampaigns} size="lg">
+            <Loader2 className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+          <Button variant="outline" size="lg" onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Loading campaigns...</span>
+      <div className="space-y-8">
+        {/* Skeleton Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-muted/50 rounded-xl overflow-hidden">
+                <div className="h-48 bg-muted animate-pulse" />
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-muted rounded-full animate-pulse" />
+                    <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-6 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-2/3 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+                      <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded animate-pulse" />
+                    <div className="h-10 w-full bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Loading Indicator */}
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
+          <span className="text-lg font-medium">Loading amazing campaigns...</span>
+        </div>
       </div>
     );
   }
 
   if (!campaigns || campaigns.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          No campaigns found
-        </h3>
-        <p className="text-gray-600">
-          Be the first to launch a product campaign!
+      <div className="text-center py-20">
+        <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Rocket className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h3 className="text-2xl font-bold mb-3">No campaigns found</h3>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          Be the first to launch a product campaign and start your journey today!
         </p>
+        <Link href="/create">
+          <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Campaign
+          </Button>
+        </Link>
       </div>
     );
   }
