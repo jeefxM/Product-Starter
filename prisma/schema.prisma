@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* ========== User (minimal) ========== */
+model User {
+  id            String  @id @default(cuid())
+  walletAddress String? @unique @db.VarChar(42)
+  name          String?
+  avatar        String?
+  fid           BigInt?           // Farcaster FID (optional)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("users")
+  @@index([walletAddress])
+}
+
+/* ========== DR Series (presale config) ========== */
+enum DRSeriesStatus {
+  LIVE
+  SUCCESS   // min sales reached after presale
+  FAILED    // min sales not reached after presale
+}
+
+model DRSeries {
+  id                String   @id @default(cuid())
+  contractAddress   String   @unique @db.VarChar(42) // DR proxy address
+  creatorAddress    String   @db.VarChar(42)
+  paymentToken      String   @db.VarChar(42)
+
+  // Params from DRParams
+  name              String
+  symbol            String
+  maxItems          Int
+  presaleTimestamp  DateTime
+  startPrice        Decimal
+  priceIncrement    Decimal
+  minRequiredSales  Int
+  imageUrl          String?  // Optional campaign image URL
+
+  // Light mirrors
+  totalEverMinted   Int      @default(0)
+  status            DRSeriesStatus @default(LIVE)
+
+  // Optional on-chain ref
+  createdBlock      BigInt?  // OPTIONAL: block when created
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations (minimal)
+  tokens            DRToken[]
+  listings          Listing[]
+  creatorWithdrawals CreatorWithdrawal[]
+
+  @@map("dr_series")
+  @@index([creatorAddress])
+  @@index([paymentToken])
+}
+
+/* ========== Minted token (ERC721) ========== */
+enum DRTokenStatus {
+  ACTIVE
+  REFUNDED
+  BURNED
+}
+
+model DRToken {
+  id               String   @id @default(cuid())
+
+  drAddress        String   @db.VarChar(42)
+  tokenId          BigInt
+  @@unique([drAddress, tokenId])
+
+  // Economics
+  mintPriceWei     BigInt        // full price
+  mintPriceNetWei  BigInt        // after platform fee
+  paymentToken     String @db.VarChar(42)
+
+  // Ownership snapshot
+  mintedByAddress  String @db.VarChar(42)
+  currentOwner     String @db.VarChar(42)
+
+  // Light lifecycle markers
+  status           DRTokenStatus @default(ACTIVE)
+  mintedAt         DateTime @default(now())
+  mintedBlock      BigInt?       // OPTIONAL
+
+  // Relations
+  seriesId         String
+  series           DRSeries @relation(fields: [seriesId], references: [id])
+  listings         Listing[]
+
+  @@map("dr_tokens")
+  @@index([currentOwner])
+  @@index([drAddress, tokenId])
+}
+
+/* ========== Secondary market (minimal) ========== */
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+model Listing {
+  id              String        @id @default(cuid())
+
+  drAddress       String        @db.VarChar(42)
+  tokenId         BigInt
+  @@index([drAddress, tokenId])
+
+  priceWei        BigInt
+  paymentToken    String        @db.VarChar(42)
+
+  sellerAddress   String        @db.VarChar(42)
+  buyerAddress    String?       @db.VarChar(42)
+  status          ListingStatus @default(ACTIVE)
+
+  listedAt        DateTime      @default(now())
+  boughtAt        DateTime?
+  cancelledAt     DateTime?
+
+  // OPTIONAL block refs
+  listedBlock     BigInt?
+  boughtBlock     BigInt?
+  cancelledBlock  BigInt?
+
+  // Relations (light)
+  seriesId        String?
+  series          DRSeries?     @relation(fields: [seriesId], references: [id])
+
+  tokenRefId      String?
+  token           DRToken?      @relation(fields: [tokenRefId], references: [id])
+
+  @@map("listings")
+  @@index([status])
+}
+
+/* ========== Creator withdrawals (minimal) ========== */
+model CreatorWithdrawal {
+  id              String   @id @default(cuid())
+  drAddress       String   @db.VarChar(42)
+  creatorAddress  String   @db.VarChar(42)
+  amountWei       BigInt
+
+  txHash          String   @unique
+  blockNumber     BigInt?  // OPTIONAL
+
+  createdAt       DateTime @default(now())
+
+  // Optional link to series
+  seriesId        String?
+  series          DRSeries? @relation(fields: [seriesId], references: [id])
+
+  @@map("creator_withdrawals")
+  @@index([drAddress])
+  @@index([creatorAddress])
+}
