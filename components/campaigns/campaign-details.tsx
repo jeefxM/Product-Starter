@@ -1448,6 +1448,17 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     </div>
 
                     <Separator />
+                    {/* Supporter Refund Component */}
+                    {!isCreator && (
+                      <div className="space-y-3">
+                        <SupporterRefund
+                          contractAddress={campaign.contractAddress}
+                          paymentToken={campaign.currency}
+                          campaignName={campaign.name}
+                        />
+                      </div>
+                    )}
+                    <Separator />
 
                     {/* Shortfall Information */}
                     <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
@@ -1496,17 +1507,6 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     </div>
 
                     <Separator />
-
-                    {/* Supporter Refund Component */}
-                    {!isCreator && (
-                      <div className="space-y-3">
-                        <SupporterRefund
-                          contractAddress={campaign.contractAddress}
-                          paymentToken={campaign.currency}
-                          campaignName={campaign.name}
-                        />
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               ) : (
