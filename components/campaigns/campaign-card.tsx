@@ -82,6 +82,12 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const isSuccessful = campaign.dbStatus === "SUCCESS" || progress >= 100;
   const isFailed = campaign.dbStatus === "FAILED";
 
+  // Check if values are still loading
+  const isLoading =
+    !campaign.currentPrice ||
+    campaign.currentPrice === "0" ||
+    campaign.currentPrice === "0.00";
+
   const handleSupport = async () => {
     try {
       if (isHandlingSupportRef.current) return;
@@ -342,25 +348,34 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                   : "bg-muted/50"
               )}
             >
-              <div
-                className={cn(
-                  "text-lg font-bold",
-                  isSuccessful
-                    ? "text-white-600 dark:text-white-400"
-                    : isFailed
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-primary"
-                )}
-              >
-                {campaign.currentPrice}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isSuccessful
-                  ? "Final Price"
-                  : isFailed
-                  ? "Final Price"
-                  : "Current Price"}
-              </div>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <div className="h-6 bg-muted animate-pulse rounded mx-auto w-16"></div>
+                  <div className="h-3 bg-muted animate-pulse rounded mx-auto w-20"></div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={cn(
+                      "text-lg font-bold",
+                      isSuccessful
+                        ? "text-white-600 dark:text-white-400"
+                        : isFailed
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-primary"
+                    )}
+                  >
+                    {campaign.currentPrice}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isSuccessful
+                      ? "Final Price"
+                      : isFailed
+                      ? "Final Price"
+                      : "Current Price"}
+                  </div>
+                </>
+              )}
             </div>
 
             <div
@@ -379,57 +394,89 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               {isFailed && (
                 <XCircle className="absolute -top-2 -right-2 w-5 h-5 text-red-500" />
               )}
-              <div
-                className={cn(
-                  "text-lg font-bold",
-                  isSuccessful
-                    ? "text-green-600 dark:text-green-400"
-                    : isFailed
-                    ? "text-red-600 dark:text-red-400"
-                    : ""
-                )}
-              >
-                {isSuccessful
-                  ? "100%"
-                  : isFailed
-                  ? `${Math.round(progress)}%`
-                  : `${Math.round(progress)}%`}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isSuccessful ? "Funded! 🎉" : isFailed ? "Failed" : "Funded"}
-              </div>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <div className="h-6 bg-muted animate-pulse rounded mx-auto w-12"></div>
+                  <div className="h-3 bg-muted animate-pulse rounded mx-auto w-16"></div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={cn(
+                      "text-lg font-bold",
+                      isSuccessful
+                        ? "text-green-600 dark:text-green-400"
+                        : isFailed
+                        ? "text-red-600 dark:text-red-400"
+                        : ""
+                    )}
+                  >
+                    {isSuccessful
+                      ? "100%"
+                      : isFailed
+                      ? `${Math.round(progress)}%`
+                      : `${Math.round(progress)}%`}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isSuccessful
+                      ? "Funded! 🎉"
+                      : isFailed
+                      ? "Failed"
+                      : "Funded"}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
           {/* Progress Bar */}
           <div className="space-y-2 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {isSuccessful
-                  ? "Final Result"
-                  : isFailed
-                  ? "Final Result"
-                  : "Progress"}
-              </span>
-              <span
-                className={cn(
-                  "font-medium",
-                  isSuccessful && "text-green-600 dark:text-green-400",
-                  isFailed && "text-red-600 dark:text-red-400"
-                )}
-              >
-                {isSuccessful
-                  ? "100%"
-                  : isFailed
-                  ? `${Math.round(progress)}%`
-                  : `${Math.round(progress)}%`}
-              </span>
-            </div>
-            <Progress value={isSuccessful ? 100 : progress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{campaign.supporters} supporters</span>
-              <span>{campaign.minRequiredSales} goal</span>
-            </div>
+            {isLoading ? (
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <div className="h-4 bg-muted animate-pulse rounded w-16"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-8"></div>
+                </div>
+                <div className="h-2 bg-muted animate-pulse rounded"></div>
+                <div className="flex justify-between text-xs">
+                  <div className="h-3 bg-muted animate-pulse rounded w-20"></div>
+                  <div className="h-3 bg-muted animate-pulse rounded w-16"></div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {isSuccessful
+                      ? "Final Result"
+                      : isFailed
+                      ? "Final Result"
+                      : "Progress"}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      isSuccessful && "text-green-600 dark:text-green-400",
+                      isFailed && "text-red-600 dark:text-red-400"
+                    )}
+                  >
+                    {isSuccessful
+                      ? "100%"
+                      : isFailed
+                      ? `${Math.round(progress)}%`
+                      : `${Math.round(progress)}%`}
+                  </span>
+                </div>
+                <Progress
+                  value={isSuccessful ? 100 : progress}
+                  className="h-2"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{campaign.supporters} supporters</span>
+                  <span>{campaign.minRequiredSales} goal</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Time Remaining / Status */}
@@ -443,47 +490,65 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                 : "bg-muted/30"
             )}
           >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {isSuccessful ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-green-600 dark:text-green-400 font-medium">
-                    Successfully Funded!
-                  </span>
-                </>
-              ) : isFailed ? (
-                <>
-                  <XCircle className="w-4 h-4 text-red-500" />
-                  <span className="text-red-600 dark:text-red-400 font-medium">
-                    Campaign Failed
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4" />
-                  <span>Time Remaining</span>
-                </>
-              )}
-            </div>
-            <span className="text-sm font-medium">
-              {isSuccessful ? (
-                <span className="text-green-600 dark:text-green-400">
-                  Complete 🎉
+            {isLoading ? (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-muted animate-pulse rounded"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-24"></div>
+                </div>
+                <div className="h-4 bg-muted animate-pulse rounded w-16"></div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {isSuccessful ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        Successfully Funded!
+                      </span>
+                    </>
+                  ) : isFailed ? (
+                    <>
+                      <XCircle className="w-4 h-4 text-red-500" />
+                      <span className="text-red-600 dark:text-red-400 font-medium">
+                        Campaign Failed
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-4 h-4" />
+                      <span>Time Remaining</span>
+                    </>
+                  )}
+                </div>
+                <span className="text-sm font-medium">
+                  {isSuccessful ? (
+                    <span className="text-green-600 dark:text-green-400">
+                      Complete 🎉
+                    </span>
+                  ) : isFailed ? (
+                    <span className="text-red-600 dark:text-red-400">
+                      Failed ❌
+                    </span>
+                  ) : (
+                    timeRemaining.replace("in ", "")
+                  )}
                 </span>
-              ) : isFailed ? (
-                <span className="text-red-600 dark:text-red-400">
-                  Failed ❌
-                </span>
-              ) : (
-                timeRemaining.replace("in ", "")
-              )}
-            </span>
+              </>
+            )}
           </div>
         </CardContent>
 
         {/* Card Footer */}
         <CardFooter className="p-6 pt-0">
-          {isSuccessful ? (
+          {isLoading ? (
+            /* Loading State Buttons */
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <div className="flex-1 h-12 bg-muted animate-pulse rounded"></div>
+              <div className="flex-1 h-12 bg-muted animate-pulse rounded"></div>
+            </div>
+          ) : isSuccessful ? (
             /* Success State Buttons - Side by Side */
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <Button
