@@ -31,7 +31,7 @@ import { useEffect, useState, useRef } from "react";
 import { TokenApprovalModal } from "./token-approval-modal";
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { cn } from "@/lib/utils";
-import { formatDistance, formatDistanceToNow } from "date-fns";
+import { formatDistance } from "date-fns";
 
 interface Campaign {
   id: string;
@@ -91,10 +91,10 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     campaign.name,
     progress,
   ]);
-  // Use custom time formatting for better accuracy with minutes/hours
-  const timeRemaining = formatDistanceToNow(campaign.endDate, {
-    addSuffix: true,
-  });
+  // Use the same time calculation as campaign details for consistency
+  // Convert endDate to Unix timestamp in seconds for formatTimeRemaining
+  const endDateTimestamp = Math.floor(campaign.endDate.getTime() / 1000);
+  const timeRemaining = formatTimeRemaining(BigInt(endDateTimestamp));
   console.log("timeRemaining", campaign);
 
   // Check if campaign is successful or failed

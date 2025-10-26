@@ -52,8 +52,8 @@ export default function CreateCampaignPage() {
               </h1>
 
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-                launch a campaign and let supporters mint NFT receipts as proof
-                of their early support
+                Launch your product giving early supporters perks contained in
+                Digital Receipt NFTs that can be redeemed or traded!
               </p>
 
               {/* Features */}

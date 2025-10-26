@@ -545,7 +545,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
     addSuffix: true,
   });
 
-  console.log("time", timeRemaining);
+  console.log("time", campaign);
   // Check if campaign is successful
   const isSuccessful = campaignDbStatus === "SUCCESS" || progress >= 100;
   const isCreator =

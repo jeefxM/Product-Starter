@@ -2,10 +2,19 @@
 
 import { CampaignCard } from "./campaign-card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Rocket, Plus, Search, X } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  Rocket,
+  Plus,
+  Search,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePublicClient } from "wagmi";
 import CampaignNFTABI from "@/lib/ABI/CampaignNFTABI.json";
+import { formatTimeRemaining } from "@/lib/time-utils";
 import Link from "next/link";
 
 interface Campaign {
@@ -50,12 +59,30 @@ export function CampaignGrid({
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCampaigns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only fetch once on mount
+
+  // Periodic blockchain data refresh to prevent reverting to stale DB values
+  useEffect(() => {
+    if (!publicClient || campaigns.length === 0) return;
+
+    const refreshInterval = setInterval(async () => {
+      console.log("🔄 Refreshing blockchain data to prevent stale values...");
+      setRefreshing(true);
+      try {
+        await fetchCampaigns();
+      } finally {
+        setRefreshing(false);
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [publicClient, campaigns.length]);
 
   // Apply filters whenever campaigns, search term, category, or status changes
   useEffect(() => {
@@ -90,6 +117,52 @@ export function CampaignGrid({
     setFilteredCampaigns(filtered);
   }, [campaigns, searchTerm, selectedCategory, selectedStatus]);
 
+  // Helper function to fetch blockchain data with retries
+  const fetchBlockchainDataWithRetry = async (
+    contractAddress: string,
+    functionName: string,
+    retries = 3
+  ): Promise<bigint> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        // First check if contract exists
+        const code = await publicClient.getCode({
+          address: contractAddress as `0x${string}`,
+        });
+
+        if (code === "0x") {
+          throw new Error(
+            `Contract not deployed at address: ${contractAddress}`
+          );
+        }
+
+        const result = await publicClient.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: CampaignNFTABI,
+          functionName: functionName as any,
+        });
+
+        // Check if result is valid
+        if (result === null || result === undefined) {
+          throw new Error(`Function ${functionName} returned null/undefined`);
+        }
+
+        return result as bigint;
+      } catch (err) {
+        console.warn(
+          `⚠️ Attempt ${i + 1}/${retries} failed for ${functionName}:`,
+          err
+        );
+        if (i === retries - 1) throw err;
+        // Wait before retry
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+    throw new Error(
+      `Failed to fetch ${functionName} after ${retries} attempts`
+    );
+  };
+
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
@@ -116,7 +189,7 @@ export function CampaignGrid({
           minRequiredSales: campaign.minRequiredSales,
           maxSupply: campaign.maxSupply,
           endDate: new Date(
-            campaign.endDate || Date.now() + 30 * 24 * 60 * 60 * 1000
+            campaign.presaleTimestamp || Date.now() + 30 * 24 * 60 * 60 * 1000
           ),
           category: campaign.category || "Technology",
           status:
@@ -145,6 +218,7 @@ export function CampaignGrid({
           let formattedPrice = dbPrice.toFixed(2);
           let supporters = campaign.totalEverMinted || 0;
           let totalRaised = "0";
+          let blockchainTimestamp: bigint;
 
           console.log(`📊 [${campaign.name}] DB Values:`, {
             startPrice: campaign.startPrice,
@@ -153,56 +227,89 @@ export function CampaignGrid({
           });
 
           try {
-            // Fetch multiple contract data in parallel with better error handling
-            const [priceFromChain, totalEverMinted] = await Promise.all([
-              publicClient
-                .readContract({
-                  address: campaign.contractAddress as `0x${string}`,
-                  abi: CampaignNFTABI,
-                  functionName: "getCurrentPriceToMint",
-                })
-                .catch((err) => {
-                  console.warn(
-                    `⚠️ Price fetch failed for ${campaign.name}:`,
-                    err.message || err
-                  );
-                  // Use DB value as fallback (already in proper decimal format)
-                  return BigInt(Math.floor(dbPrice * 1000000));
-                }),
-              publicClient
-                .readContract({
-                  address: campaign.contractAddress as `0x${string}`,
-                  abi: CampaignNFTABI,
-                  functionName: "totalEverMinted",
-                })
-                .catch((err) => {
-                  console.warn(
-                    `⚠️ TotalEverMinted fetch failed for ${campaign.name}:`,
-                    err.message || err
-                  );
-                  return BigInt(campaign.totalEverMinted || 0);
-                }),
-            ]);
-
-            // Format price (assuming 6 decimals for PYUSD)
-            const priceNum = Number(priceFromChain) / 1000000;
-            formattedPrice = priceNum.toFixed(2);
-            currentPrice = formattedPrice;
-
-            // Get actual supporter count from blockchain
-            supporters = Number(totalEverMinted);
-
-            // Calculate total raised: price * supporters
-            totalRaised = (priceNum * supporters).toFixed(2);
-
-            console.log(`✅ [${campaign.name}] Blockchain Values:`, {
-              priceFromChain: String(priceFromChain),
-              priceNum,
-              formattedPrice,
-              totalEverMinted: String(totalEverMinted),
-              supporters,
-              totalRaised,
+            // First check if contract is deployed
+            const contractCode = await publicClient.getCode({
+              address: campaign.contractAddress as `0x${string}`,
             });
+
+            if (contractCode === "0x") {
+              console.warn(
+                `⚠️ Contract not deployed for ${campaign.name} at ${campaign.contractAddress}, using DB values`
+              );
+              // Use database values as fallback
+              formattedPrice = dbPrice.toFixed(2);
+              currentPrice = formattedPrice;
+              supporters = campaign.totalEverMinted || 0;
+              totalRaised = (dbPrice * supporters).toFixed(2);
+
+              // Set fallback timestamp from database
+              const presaleTimestamp = campaign.presaleTimestamp
+                ? new Date(campaign.presaleTimestamp).getTime()
+                : Date.now();
+              blockchainTimestamp = BigInt(Math.floor(presaleTimestamp / 1000));
+            } else {
+              // Fetch multiple contract data in parallel with retry mechanism
+              const [priceFromChain, totalEverMinted, timestamp] =
+                await Promise.all([
+                  fetchBlockchainDataWithRetry(
+                    campaign.contractAddress,
+                    "getCurrentPriceToMint"
+                  ).catch((err) => {
+                    console.warn(
+                      `⚠️ Price fetch failed for ${campaign.name} after retries:`,
+                      err.message || err
+                    );
+                    // Use DB value as fallback (already in proper decimal format)
+                    return BigInt(Math.floor(dbPrice * 1000000));
+                  }),
+                  fetchBlockchainDataWithRetry(
+                    campaign.contractAddress,
+                    "totalEverMinted"
+                  ).catch((err) => {
+                    console.warn(
+                      `⚠️ TotalEverMinted fetch failed for ${campaign.name} after retries:`,
+                      err.message || err
+                    );
+                    return BigInt(campaign.totalEverMinted || 0);
+                  }),
+                  fetchBlockchainDataWithRetry(
+                    campaign.contractAddress,
+                    "timestamp"
+                  ).catch((err) => {
+                    console.warn(
+                      `⚠️ Timestamp fetch failed for ${campaign.name} after retries:`,
+                      err.message || err
+                    );
+                    // Use DB presaleTimestamp as fallback
+                    const presaleTimestamp = campaign.presaleTimestamp
+                      ? new Date(campaign.presaleTimestamp).getTime()
+                      : Date.now();
+                    return BigInt(Math.floor(presaleTimestamp / 1000));
+                  }),
+                ]);
+
+              // Assign blockchain timestamp
+              blockchainTimestamp = timestamp;
+
+              // Format price (assuming 6 decimals for PYUSD)
+              const priceNum = Number(priceFromChain) / 1000000;
+              formattedPrice = priceNum.toFixed(2);
+              currentPrice = formattedPrice;
+
+              // Get actual supporter count from blockchain
+              supporters = Number(totalEverMinted);
+
+              // Calculate total raised from current price and supporters
+              totalRaised = (priceNum * supporters).toFixed(2);
+
+              console.log(`✅ [${campaign.name}] Blockchain Values:`, {
+                priceNum,
+                formattedPrice,
+                totalEverMinted: String(totalEverMinted),
+                supporters,
+                totalRaised,
+              });
+            }
           } catch (error) {
             console.error(
               `❌ Failed to fetch blockchain data for campaign ${campaign.name}:`,
@@ -214,6 +321,12 @@ export function CampaignGrid({
             supporters = campaign.totalEverMinted || 0;
             // Calculate total raised from price and supporters
             totalRaised = (dbPrice * supporters).toFixed(2);
+
+            // Set fallback timestamp from database
+            const presaleTimestamp = campaign.presaleTimestamp
+              ? new Date(campaign.presaleTimestamp).getTime()
+              : Date.now();
+            blockchainTimestamp = BigInt(Math.floor(presaleTimestamp / 1000));
 
             console.log(`🔄 [${campaign.name}] Using DB Fallback:`, {
               price: formattedPrice,
@@ -233,9 +346,7 @@ export function CampaignGrid({
             supporters,
             minRequiredSales: campaign.minRequiredSales,
             maxSupply: campaign.maxSupply,
-            endDate: new Date(
-              campaign.endDate || Date.now() + 30 * 24 * 60 * 60 * 1000
-            ),
+            endDate: new Date(Number(blockchainTimestamp) * 1000),
             category: campaign.category || "Technology",
             status:
               campaign.status === "LIVE"
@@ -429,6 +540,16 @@ export function CampaignGrid({
           </Button>
         )}
       </div>
+      {/* Refreshing indicator */}
+      {refreshing && (
+        <div className="flex items-center justify-center py-4 bg-blue-50/50 rounded-lg border border-blue-200">
+          <RefreshCw className="w-4 h-4 mr-2 animate-spin text-blue-600" />
+          <span className="text-sm text-blue-600 font-medium">
+            Updating blockchain data...
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCampaigns.map((campaign) => (
           <CampaignCard key={campaign.id} campaign={campaign} />
