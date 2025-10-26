@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const finalPriceIncrement = parseFloat(priceIncrement || "0.3");
     const finalMaxItems = parseInt(maxSupply || maxItems || "1000");
     const finalMinRequiredSales = parseInt(
-      minRequiredSales || fundingGoal || "10"
+      minRequiredSales || fundingGoal || "1"
     );
 
     // Convert timestamp to Date (timestamp is in seconds, Date expects milliseconds)
