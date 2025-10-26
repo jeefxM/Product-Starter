@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +17,10 @@ import {
   Star,
   Zap,
   Trophy,
+  Share2,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,6 +29,7 @@ import { useSupportCampaign } from "@/hooks/use-support-campaign";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef } from "react";
 import { TokenApprovalModal } from "./token-approval-modal";
+import { CampaignStatusBadge } from "./campaign-status-badge";
 import { cn } from "@/lib/utils";
 
 interface Campaign {
@@ -45,6 +46,7 @@ interface Campaign {
   endDate: Date;
   category: string;
   status: "active" | "funded" | "ending-soon";
+  dbStatus?: "LIVE" | "SUCCESS" | "FAILED";
   totalRaised: string;
   contractAddress: string;
   creatorAvatar: string;
@@ -76,7 +78,10 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     addSuffix: true,
   });
 
-  
+  // Check if campaign is successful or failed
+  const isSuccessful = campaign.dbStatus === "SUCCESS" || progress >= 100;
+  const isFailed = campaign.dbStatus === "FAILED";
+
   const handleSupport = async () => {
     try {
       if (isHandlingSupportRef.current) return;
@@ -167,9 +172,43 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     }
   }, [error, toast]);
 
+  const handleShare = () => {
+    const campaignUrl = `${window.location.origin}/campaign/${campaign.id}`;
+    const text = isSuccessful
+      ? `🎉 Amazing! ${campaign.name} has been successfully funded with ${campaign.supporters} supporters!`
+      : `Check out ${campaign.name} - A great campaign that needs your support!`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: `${campaign.name} ${
+          isSuccessful ? "- Successfully Funded!" : ""
+        }`,
+        text: text,
+        url: campaignUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(`${text} ${campaignUrl}`);
+      toast({
+        title: "Link Copied!",
+        description: isSuccessful
+          ? "Success story copied to clipboard. Share the great news!"
+          : "Campaign link copied to clipboard",
+      });
+    }
+  };
+
   return (
     <>
-      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur border-2 border-transparent hover:border-primary/20">
+      <Card
+        className={cn(
+          "group overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur border-2",
+          isSuccessful
+            ? "border-green-500/30 hover:border-green-500/50"
+            : isFailed
+            ? "border-red-500/30 hover:border-red-500/50"
+            : "border-transparent hover:border-primary/20"
+        )}
+      >
         {/* Card Header with Image */}
         <div className="relative">
           <div className="relative h-56 overflow-hidden">
@@ -185,14 +224,31 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             {/* Floating Badges */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
               <Badge
-                variant="secondary"
-                className="bg-white/20 backdrop-blur-md text-white border-white/30 hover:bg-white/30 transition-all duration-300"
+                className={cn(
+                  "bg-white/20 backdrop-blur-md text-white border-white/30 hover:bg-white/30 transition-all duration-300 font-semibold text-sm px-3 py-1.5 shadow-lg",
+                  campaign.category === "Technology" &&
+                    "bg-blue-500/20 border-blue-400/30",
+                  campaign.category === "Gaming" &&
+                    "bg-purple-500/20 border-purple-400/30",
+                  campaign.category === "Art" &&
+                    "bg-pink-500/20 border-pink-400/30",
+                  campaign.category === "Music" &&
+                    "bg-green-500/20 border-green-400/30",
+                  campaign.category === "Fashion" &&
+                    "bg-orange-500/20 border-orange-400/30",
+                  campaign.category === "Food" &&
+                    "bg-red-500/20 border-red-400/30",
+                  campaign.category === "Health" &&
+                    "bg-emerald-500/20 border-emerald-400/30",
+                  campaign.category === "Education" &&
+                    "bg-indigo-500/20 border-indigo-400/30"
+                )}
               >
                 <Star className="w-3 h-3 mr-1" />
                 {campaign.category}
               </Badge>
               {campaign.hasPerks && (
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg">
+                <Badge className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-100 border-purple-400/30 shadow-lg backdrop-blur-md">
                   <Gift className="w-3 h-3 mr-1" />
                   Perks
                 </Badge>
@@ -201,22 +257,31 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
 
             {/* Status Badge */}
             <div className="absolute top-4 right-4">
-              <Badge
-                className={cn(
-                  "backdrop-blur-md border transition-all duration-300",
-                  campaign.status === "funded"
-                    ? "bg-green-500/20 text-green-100 border-green-400/30"
-                    : campaign.status === "ending-soon"
-                    ? "bg-orange-500/20 text-orange-100 border-orange-400/30"
-                    : "bg-blue-500/20 text-blue-100 border-blue-400/30"
-                )}
-              >
-                {campaign.status === "funded" && <Trophy className="w-3 h-3 mr-1" />}
-                {campaign.status === "ending-soon" && <Clock className="w-3 h-3 mr-1" />}
-                {campaign.status === "active" && <Zap className="w-3 h-3 mr-1" />}
-                {campaign.status === "ending-soon" ? "Ending Soon" : campaign.status}
-              </Badge>
+              <div className="backdrop-blur-md rounded-md">
+                <CampaignStatusBadge
+                  contractAddress={campaign.contractAddress}
+                  currentStatus={campaign.dbStatus}
+                />
+              </div>
             </div>
+
+            {/* Success Overlay */}
+            {isSuccessful && (
+              <div className="absolute inset-0 bg-gradient-to-t from-green-600/20 via-green-500/10 to-transparent flex items-center justify-center">
+                <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-full p-3 shadow-lg animate-pulse">
+                  <Trophy className="w-8 h-8 text-yellow-500" />
+                </div>
+              </div>
+            )}
+
+            {/* Failure Overlay */}
+            {isFailed && (
+              <div className="absolute inset-0 bg-gradient-to-t from-red-600/20 via-red-500/10 to-transparent flex items-center justify-center">
+                <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-full p-3 shadow-lg">
+                  <XCircle className="w-8 h-8 text-red-500" />
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -248,7 +313,9 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               </p>
               <div className="flex items-center gap-1">
                 <Shield className="w-3 h-3 text-green-500" />
-                <span className="text-xs text-muted-foreground">Verified Creator</span>
+                <span className="text-xs text-muted-foreground">
+                  Verified Creator
+                </span>
               </div>
             </div>
           </div>
@@ -264,80 +331,238 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
           </p>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <div className="text-lg font-bold text-primary">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div
+              className={cn(
+                "text-center p-3 rounded-lg",
+                isSuccessful
+                  ? "bg-green-50 dark:bg-green-900/20"
+                  : isFailed
+                  ? "bg-red-50 dark:bg-red-900/20"
+                  : "bg-muted/50"
+              )}
+            >
+              <div
+                className={cn(
+                  "text-lg font-bold",
+                  isSuccessful
+                    ? "text-white-600 dark:text-white-400"
+                    : isFailed
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-primary"
+                )}
+              >
                 {campaign.currentPrice}
               </div>
               <div className="text-xs text-muted-foreground">
-                {campaign.currency}
+                {isSuccessful
+                  ? "Final Price"
+                  : isFailed
+                  ? "Final Price"
+                  : "Current Price"}
               </div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <div className="text-lg font-bold">{campaign.supporters}</div>
-              <div className="text-xs text-muted-foreground">Supporters</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <div className="text-lg font-bold">{Math.round(progress)}%</div>
-              <div className="text-xs text-muted-foreground">Funded</div>
+
+            <div
+              className={cn(
+                "text-center p-3 rounded-lg relative",
+                isSuccessful
+                  ? "bg-green-50 dark:bg-green-900/20"
+                  : isFailed
+                  ? "bg-red-50 dark:bg-red-900/20"
+                  : "bg-muted/50"
+              )}
+            >
+              {isSuccessful && (
+                <Trophy className="absolute -top-2 -right-2 w-5 h-5 text-yellow-500 animate-bounce" />
+              )}
+              {isFailed && (
+                <XCircle className="absolute -top-2 -right-2 w-5 h-5 text-red-500" />
+              )}
+              <div
+                className={cn(
+                  "text-lg font-bold",
+                  isSuccessful
+                    ? "text-green-600 dark:text-green-400"
+                    : isFailed
+                    ? "text-red-600 dark:text-red-400"
+                    : ""
+                )}
+              >
+                {isSuccessful
+                  ? "100%"
+                  : isFailed
+                  ? `${Math.round(progress)}%`
+                  : `${Math.round(progress)}%`}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {isSuccessful ? "Funded! 🎉" : isFailed ? "Failed" : "Funded"}
+              </div>
             </div>
           </div>
 
           {/* Progress Bar */}
           <div className="space-y-2 mb-6">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{Math.round(progress)}%</span>
+              <span className="text-muted-foreground">
+                {isSuccessful
+                  ? "Final Result"
+                  : isFailed
+                  ? "Final Result"
+                  : "Progress"}
+              </span>
+              <span
+                className={cn(
+                  "font-medium",
+                  isSuccessful && "text-green-600 dark:text-green-400",
+                  isFailed && "text-red-600 dark:text-red-400"
+                )}
+              >
+                {isSuccessful
+                  ? "100%"
+                  : isFailed
+                  ? `${Math.round(progress)}%`
+                  : `${Math.round(progress)}%`}
+              </span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={isSuccessful ? 100 : progress} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{campaign.supporters} supporters</span>
               <span>{campaign.minRequiredSales} goal</span>
             </div>
           </div>
 
-          {/* Time Remaining */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 mb-6">
+          {/* Time Remaining / Status */}
+          <div
+            className={cn(
+              "flex items-center justify-between p-3 rounded-lg mb-6",
+              isSuccessful
+                ? "bg-green-50 dark:bg-green-900/20"
+                : isFailed
+                ? "bg-red-50 dark:bg-red-900/20"
+                : "bg-muted/30"
+            )}
+          >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>Time Remaining</span>
+              {isSuccessful ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-green-600 dark:text-green-400 font-medium">
+                    Successfully Funded!
+                  </span>
+                </>
+              ) : isFailed ? (
+                <>
+                  <XCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-red-600 dark:text-red-400 font-medium">
+                    Campaign Failed
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-4 h-4" />
+                  <span>Time Remaining</span>
+                </>
+              )}
             </div>
             <span className="text-sm font-medium">
-              {timeRemaining.replace("in ", "")}
+              {isSuccessful ? (
+                <span className="text-green-600 dark:text-green-400">
+                  Complete 🎉
+                </span>
+              ) : isFailed ? (
+                <span className="text-red-600 dark:text-red-400">
+                  Failed ❌
+                </span>
+              ) : (
+                timeRemaining.replace("in ", "")
+              )}
             </span>
           </div>
         </CardContent>
 
         {/* Card Footer */}
-        <CardFooter className="p-6 pt-0 space-y-3">
-          <Button
-            className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
-            onClick={handleSupport}
-            disabled={isPending || isConfirming}
-          >
-            {isPending || isConfirming ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                {isPending ? "Submitting..." : "Confirming..."}
-              </>
-            ) : (
-              <>
-                <TrendingUp className="mr-2 h-4 w-4 transition-transform group-hover/btn:scale-110" />
-                Support Now
+        <CardFooter className="p-6 pt-0">
+          {isSuccessful ? (
+            /* Success State Buttons - Side by Side */
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Button
+                className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
+                onClick={handleShare}
+              >
+                <Share2 className="mr-2 h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                Share
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-              </>
-            )}
-          </Button>
+              </Button>
 
-          <Link href={`/campaign/${campaign.id}`} className="w-full">
-            <Button
-              variant="outline"
-              className="w-full h-10 font-medium transition-all duration-300 hover:bg-primary/5 group/link"
-            >
-              <ExternalLink className="mr-2 h-4 w-4 transition-transform group-hover/link:scale-110" />
-              View Details
-            </Button>
-          </Link>
+              <Link href={`/campaign/${campaign.id}`} className="flex-1">
+                <Button
+                  variant="outline"
+                  className="w-full h-12 font-medium transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20 border-green-500/50 text-green-700 dark:text-green-400 group/link"
+                >
+                  <Trophy className="mr-2 h-4 w-4 transition-transform group-hover/link:scale-110" />
+                  View Details
+                </Button>
+              </Link>
+            </div>
+          ) : isFailed ? (
+            /* Failure State Buttons - Side by Side */
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Button
+                className="flex-1 h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
+                onClick={() => {
+                  // Navigate to campaign details for refund
+                  window.location.href = `/campaign/${campaign.id}`;
+                }}
+              >
+                <RefreshCw className="mr-2 h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                Claim Refund
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+              </Button>
+
+              <Link href={`/campaign/${campaign.id}`} className="flex-1">
+                <Button
+                  variant="outline"
+                  className="w-full h-12 font-medium transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-500/50 text-red-700 dark:text-red-400 group/link"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4 transition-transform group-hover/link:scale-110" />
+                  View Details
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            /* Active State Buttons - Side by Side */
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Button
+                className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group/btn"
+                onClick={handleSupport}
+                disabled={isPending || isConfirming}
+              >
+                {isPending || isConfirming ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    {isPending ? "Submitting..." : "Confirming..."}
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="mr-2 h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                    Support Now
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                  </>
+                )}
+              </Button>
+
+              <Link href={`/campaign/${campaign.id}`} className="flex-1">
+                <Button
+                  variant="outline"
+                  className="w-full h-12 font-medium transition-all duration-300 hover:bg-primary/5 group/link"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4 transition-transform group-hover/link:scale-110" />
+                  View Details
+                </Button>
+              </Link>
+            </div>
+          )}
         </CardFooter>
       </Card>
 

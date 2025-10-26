@@ -38,11 +38,11 @@ const UserInfo = dynamic(
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container py-6 pb-24 md:pb-10">
-        <div className="flex flex-col justify-center items-center">
+      <main className="container py-6 sm:py-8 pb-24 md:pb-10">
+        <div className="max-w-7xl mx-auto">
           <UserDashboard />
         </div>
       </main>

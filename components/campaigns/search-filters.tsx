@@ -14,10 +14,23 @@ import { Search, Filter, X, Zap, Trophy, Clock, Star } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export function SearchFilters() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+interface SearchFiltersProps {
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (value: string) => void;
+  selectedStatus: string;
+  setSelectedStatus: (value: string) => void;
+}
+
+export function SearchFilters({
+  searchTerm,
+  setSearchTerm,
+  selectedCategory,
+  setSelectedCategory,
+  selectedStatus,
+  setSelectedStatus,
+}: SearchFiltersProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   const categories = [

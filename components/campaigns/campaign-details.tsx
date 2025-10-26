@@ -35,16 +35,25 @@ import {
   ArrowUpRight,
   Globe,
   ChevronRight,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useSupportCampaign } from "@/hooks/use-support-campaign";
 import { TokenApprovalModal } from "./token-approval-modal";
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { CampaignStatusBadge } from "./campaign-status-badge";
+import { CreatorWithdrawal } from "./creator-withdrawal";
+import { CreatorWithdrawalEnhanced } from "./creator-withdrawal-enhanced";
+import { SupporterRefund } from "./supporter-refund";
+import { CampaignSuccessCelebration } from "./campaign-success-celebration";
+import { CampaignFailureDisplay } from "./campaign-failure-display";
+import { useAccount, usePublicClient } from "wagmi";
 import CampaignNFTABI from "@/lib/ABI/CampaignNFTABI.json";
 import { cn } from "@/lib/utils";
+import { formatTimeRemaining } from "@/lib/time-utils";
 
 interface CampaignDetailsProps {
   campaignId: string;
@@ -65,6 +74,7 @@ interface Campaign {
   endDate: Date;
   category: string;
   status: "active" | "funded" | "ending-soon";
+  dbStatus: "LIVE" | "SUCCESS" | "FAILED";
   totalRaised: string;
   contractAddress: string;
   creatorAvatar: string;
@@ -85,6 +95,8 @@ interface Campaign {
 
 export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
   const { toast } = useToast();
+  const { address } = useAccount();
+  const publicClient = usePublicClient();
   const { supportCampaign, isPending, isConfirming, isConfirmed, hash, error } =
     useSupportCampaign();
 
@@ -92,6 +104,9 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [campaignError, setCampaignError] = useState<string | null>(null);
+  const [campaignDbStatus, setCampaignDbStatus] = useState<
+    "LIVE" | "SUCCESS" | "FAILED"
+  >("LIVE");
 
   // Approval modal state
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -109,7 +124,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
   // Fetch campaign data from database and blockchain
   useEffect(() => {
     fetchCampaignData();
-  }, [campaignId]);
+  }, [campaignId, publicClient]);
 
   // Handle transaction confirmation
   useEffect(() => {
@@ -144,17 +159,25 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
         throw new Error("Failed to fetch campaign data");
       }
       const result = await response.json();
+
+      if (!result.success || !result.campaign) {
+        throw new Error("Campaign not found in database");
+      }
+
       const dbCampaign = result.campaign;
 
-      // Create public client for blockchain calls
-      const publicClient = createPublicClient({
-        chain: sepolia,
-        transport: http(),
+      console.log("🔍 Database Campaign Values:", {
+        startPrice: dbCampaign.startPrice,
+        priceIncrement: dbCampaign.priceIncrement,
+        totalEverMinted: dbCampaign.totalEverMinted,
+        minRequiredSales: dbCampaign.minRequiredSales,
+        maxSupply: dbCampaign.maxSupply,
+        presaleTimestamp: dbCampaign.presaleTimestamp,
+        contractAddress: dbCampaign.contractAddress,
       });
 
-      // Fetch real-time data from blockchain
-      const [
-        currentPrice,
+      // Declare variables at function scope
+      let currentPrice,
         totalEverMinted,
         minRequiredSales,
         maxItems,
@@ -162,48 +185,176 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
         totalEarnedByCreator,
         startPrice,
         priceIncrement,
-      ] = await Promise.all([
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "getCurrentPriceToMint",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "totalEverMinted",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "minRequiredSales",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "totalSupply",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "timestamp",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "totalEarnedByCreator",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "startPrice",
-        }),
-        publicClient.readContract({
-          address: dbCampaign.contractAddress as `0x${string}`,
-          abi: CampaignNFTABI,
-          functionName: "priceIncrement",
-        }),
-      ]);
+        withdrawalAmountData;
+
+      // Check if public client is available
+      if (!publicClient) {
+        // Use database values as fallback when no public client
+        // Safely convert database values to numbers with fallbacks
+        const startPriceNum = Number(dbCampaign.startPrice) || 0;
+        const priceIncrementNum = Number(dbCampaign.priceIncrement) || 0;
+        const totalMintedNum = Number(dbCampaign.totalEverMinted) || 0;
+        const minRequiredSalesNum = Number(dbCampaign.minRequiredSales) || 0;
+        const maxSupplyNum = Number(dbCampaign.maxSupply) || 0;
+        const presaleTimestamp = dbCampaign.presaleTimestamp
+          ? new Date(dbCampaign.presaleTimestamp).getTime()
+          : Date.now();
+
+        currentPrice = BigInt(Math.floor(startPriceNum * 1000000));
+        totalEverMinted = BigInt(totalMintedNum);
+        minRequiredSales = BigInt(minRequiredSalesNum);
+        maxItems = BigInt(maxSupplyNum);
+        timestamp = BigInt(Math.floor(presaleTimestamp / 1000));
+        startPrice = BigInt(Math.floor(startPriceNum * 1000000));
+        priceIncrement = BigInt(Math.floor(priceIncrementNum * 1000000));
+
+        // Calculate totalEarnedByCreator from database data
+        const avgPrice =
+          startPriceNum + (priceIncrementNum * totalMintedNum) / 2;
+        totalEarnedByCreator = BigInt(
+          Math.floor(avgPrice * totalMintedNum * 1000000)
+        );
+        withdrawalAmountData = totalEarnedByCreator;
+      } else {
+        // Fetch real-time data from blockchain
+
+        try {
+          // Try to get current price first, with fallback to startPrice
+          let currentPriceFromContract;
+          try {
+            currentPriceFromContract = await publicClient.readContract({
+              address: dbCampaign.contractAddress as `0x${string}`,
+              abi: CampaignNFTABI,
+              functionName: "getCurrentPriceToMint",
+            });
+          } catch (priceError) {
+            console.error(
+              "Error fetching current price, using startPrice:",
+              priceError
+            );
+            currentPriceFromContract = BigInt(
+              Math.floor(Number(dbCampaign.startPrice) * 1000000)
+            );
+          }
+
+          [
+            currentPrice,
+            totalEverMinted,
+            minRequiredSales,
+            maxItems,
+            timestamp,
+            totalEarnedByCreator,
+            startPrice,
+            priceIncrement,
+          ] = await Promise.all([
+            Promise.resolve(currentPriceFromContract),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "totalEverMinted",
+              })
+              .catch(() => BigInt(dbCampaign.totalEverMinted || 0)),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "minRequiredSales",
+              })
+              .catch(() => BigInt(dbCampaign.minRequiredSales)),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "totalSupply",
+              })
+              .catch(() => BigInt(dbCampaign.maxSupply)),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "timestamp",
+              })
+              .catch(() =>
+                BigInt(
+                  Math.floor(
+                    new Date(dbCampaign.presaleTimestamp).getTime() / 1000
+                  )
+                )
+              ),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "totalEarnedByCreator",
+              })
+              .catch(() => BigInt(0)),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "startPrice",
+              })
+              .catch(() => {
+                const startPriceNum = Number(dbCampaign.startPrice) || 0;
+                return BigInt(Math.floor(startPriceNum * 1000000));
+              }),
+            publicClient
+              .readContract({
+                address: dbCampaign.contractAddress as `0x${string}`,
+                abi: CampaignNFTABI,
+                functionName: "priceIncrement",
+              })
+              .catch(() => {
+                const priceIncrementNum =
+                  Number(dbCampaign.priceIncrement) || 0;
+                return BigInt(Math.floor(priceIncrementNum * 1000000));
+              }),
+          ]);
+
+          // Calculate total raised from withdrawalAmount (shows actual available funds)
+          try {
+            withdrawalAmountData = await publicClient.readContract({
+              address: dbCampaign.contractAddress as `0x${string}`,
+              abi: CampaignNFTABI,
+              functionName: "withdrawalAmount",
+            });
+          } catch (withdrawalError) {
+            console.error("Error fetching withdrawalAmount:", withdrawalError);
+            withdrawalAmountData = BigInt(0);
+          }
+        } catch (contractError) {
+          console.error("Error reading contract:", contractError);
+
+          // Use database values as fallback when contract calls fail
+          // Safely convert database values to numbers with fallbacks
+          const startPriceNum = Number(dbCampaign.startPrice) || 0;
+          const priceIncrementNum = Number(dbCampaign.priceIncrement) || 0;
+          const totalMintedNum = Number(dbCampaign.totalEverMinted) || 0;
+          const minRequiredSalesNum = Number(dbCampaign.minRequiredSales) || 0;
+          const maxSupplyNum = Number(dbCampaign.maxSupply) || 0;
+          const presaleTimestamp = dbCampaign.presaleTimestamp
+            ? new Date(dbCampaign.presaleTimestamp).getTime()
+            : Date.now();
+
+          currentPrice = BigInt(Math.floor(startPriceNum * 1000000));
+          totalEverMinted = BigInt(totalMintedNum);
+          minRequiredSales = BigInt(minRequiredSalesNum);
+          maxItems = BigInt(maxSupplyNum);
+          timestamp = BigInt(Math.floor(presaleTimestamp / 1000));
+          startPrice = BigInt(Math.floor(startPriceNum * 1000000));
+          priceIncrement = BigInt(Math.floor(priceIncrementNum * 1000000));
+
+          // Calculate totalEarnedByCreator from database data
+          // This is an approximation: totalEverMinted * average price
+          const avgPrice =
+            startPriceNum + (priceIncrementNum * totalMintedNum) / 2;
+          totalEarnedByCreator = BigInt(
+            Math.floor(avgPrice * totalMintedNum * 1000000)
+          );
+          withdrawalAmountData = totalEarnedByCreator;
+        }
+      }
 
       // Format price (assuming 6 decimals for PYUSD)
       const currentPriceNum = Number(currentPrice) / 1000000;
@@ -213,18 +364,19 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
       const nextPriceNum = currentPriceNum + Number(priceIncrement) / 1000000;
       const formattedNextPrice = nextPriceNum.toFixed(3);
 
-      // Calculate total raised
-      const totalRaisedNum = Number(totalEarnedByCreator) / 1000000;
+      // Calculate total raised from totalEarnedByCreator (this includes all sales)
+      // If totalEarnedByCreator is 0, try using withdrawalAmount as fallback
+      let totalRaisedNum = Number(totalEarnedByCreator) / 1000000;
+      if (totalRaisedNum === 0 && Number(withdrawalAmountData) > 0) {
+        totalRaisedNum = Number(withdrawalAmountData) / 1000000;
+      }
       const formattedTotalRaised = totalRaisedNum.toFixed(2);
 
       const progress =
         (Number(totalEverMinted) / Number(minRequiredSales)) * 100;
-      const timeRemaining = formatDistanceToNow(
-        new Date(Number(timestamp) * 1000),
-        {
-          addSuffix: true,
-        }
-      );
+
+      // Use blockchain timestamp for accurate time remaining
+      const timeRemaining = formatTimeRemaining(timestamp as bigint);
 
       const campaignData: Campaign = {
         id: dbCampaign.id,
@@ -241,6 +393,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
         endDate: new Date(Number(timestamp) * 1000),
         category: "Technology",
         status: progress >= 100 ? "funded" : "active",
+        dbStatus: dbCampaign.status || "LIVE",
         totalRaised: formattedTotalRaised,
         contractAddress: dbCampaign.contractAddress,
         creatorAvatar: "/placeholder.svg?height=80&width=80",
@@ -263,6 +416,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
       };
 
       setCampaign(campaignData);
+      setCampaignDbStatus(dbCampaign.status || "LIVE");
     } catch (err) {
       console.error("Error fetching campaign data:", err);
       setCampaignError(
@@ -390,6 +544,11 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
   const timeRemaining = formatDistanceToNow(campaign.endDate, {
     addSuffix: true,
   });
+
+  // Check if campaign is successful
+  const isSuccessful = campaignDbStatus === "SUCCESS" || progress >= 100;
+  const isCreator =
+    address && campaign.creator.toLowerCase() === address.toLowerCase();
 
   const handleSupport = async () => {
     try {
@@ -527,28 +686,12 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
             </div>
 
             {/* Status Badge */}
-            <div className="absolute top-6 right-6">
-              <Badge
-                className={cn(
-                  "backdrop-blur-md border transition-all duration-300",
-                  campaign.status === "funded"
-                    ? "bg-green-500/20 text-green-100 border-green-400/30"
-                    : campaign.status === "ending-soon"
-                    ? "bg-orange-500/20 text-orange-100 border-orange-400/30"
-                    : "bg-blue-500/20 text-blue-100 border-blue-400/30"
-                )}
-              >
-                {campaign.status === "funded" && (
-                  <Trophy className="w-3 h-3 mr-1" />
-                )}
-                {campaign.status === "ending-soon" && (
-                  <Clock className="w-3 h-3 mr-1" />
-                )}
-                {campaign.status === "active" && (
-                  <Zap className="w-3 h-3 mr-1" />
-                )}
-                {campaign.status.replace("-", " ")}
-              </Badge>
+            <div className="absolute top-6 right-6 backdrop-blur-md">
+              <CampaignStatusBadge
+                contractAddress={campaign.contractAddress}
+                currentStatus={campaignDbStatus}
+                onStatusChange={(newStatus) => setCampaignDbStatus(newStatus)}
+              />
             </div>
 
             {/* Content Overlay */}
@@ -579,10 +722,19 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                 </div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-                  {campaign.name}
+                  {isSuccessful ? (
+                    <div className="flex items-center gap-4">
+                      <span>{campaign.name}</span>
+                      <Trophy className="w-12 h-12 text-yellow-400 animate-pulse" />
+                    </div>
+                  ) : (
+                    campaign.name
+                  )}
                 </h1>
                 <p className="text-xl text-white/90 mb-6 max-w-2xl">
-                  {campaign.description}
+                  {isSuccessful
+                    ? `🎉 Successfully funded! ${campaign.supporters} supporters helped raise ${campaign.totalRaised} ${campaign.currency}!`
+                    : campaign.description}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -593,7 +745,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                     className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white border-white/30 transition-all duration-300 hover:scale-105"
                   >
                     <Share2 className="w-4 h-4 mr-2" />
-                    Share Campaign
+                    Share {isSuccessful ? "Success Story" : "Campaign"}
                   </Button>
                   <Button
                     variant="secondary"
@@ -620,25 +772,67 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
           </div>
         </div>
 
+        {/* Success Celebration Section - Only show when campaign is successful */}
+
+        {/* Failure Display Section - Only show when campaign has failed */}
+        {/* {campaignDbStatus === "FAILED" && (
+          <div className="mb-8">
+            <CampaignFailureDisplay
+              campaignName={campaign.name}
+              creatorName={campaign.creatorName}
+              creatorAvatar={campaign.creatorAvatar}
+              totalRaised={campaign.totalRaised}
+              currency={campaign.currency}
+              supporters={campaign.supporters}
+              goal={campaign.minRequiredSales}
+            />
+          </div>
+        )} */}
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Campaign Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="group bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <Card
+                className={cn(
+                  "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1",
+                  isSuccessful
+                    ? "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800"
+                    : "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
+                )}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
-                        Current Price
+                      <p
+                        className={cn(
+                          "text-sm font-medium mb-1",
+                          isSuccessful
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-blue-600 dark:text-blue-400"
+                        )}
+                      >
+                        {isSuccessful ? "Final Price" : "Current Price"}
                       </p>
-                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      <p
+                        className={cn(
+                          "text-2xl font-bold",
+                          isSuccessful
+                            ? "text-green-800 dark:text-green-200"
+                            : "text-blue-800 dark:text-blue-200"
+                        )}
+                      >
                         {campaign.currentPrice} {campaign.currency}
                       </p>
                     </div>
                     <div className="transition-transform duration-300 group-hover:scale-110">
-                      <TrendingUp className="w-8 h-8 text-blue-500" />
+                      {isSuccessful ? (
+                        <Trophy className="w-8 h-8 text-green-500" />
+                      ) : (
+                        <TrendingUp className="w-8 h-8 text-blue-500" />
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -651,30 +845,75 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
                         Total Raised
                       </p>
-                      <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                      <p className="text-2xl font-bold text-green-800 dark:text-green-200">
                         {campaign.totalRaised} {campaign.currency}
                       </p>
+                      {isSuccessful && (
+                        <Badge className="mt-2 bg-green-500 text-white text-xs">
+                          Goal Achieved!
+                        </Badge>
+                      )}
                     </div>
-                    <div className="transition-transform duration-300 group-hover:scale-110">
+                    <div
+                      className={cn(
+                        "transition-transform duration-300 group-hover:scale-110",
+                        isSuccessful && "animate-pulse"
+                      )}
+                    >
                       <Trophy className="w-8 h-8 text-green-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="group bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <Card
+                className={cn(
+                  "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1",
+                  isSuccessful
+                    ? "bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-800"
+                    : "bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800"
+                )}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">
-                        Supporters
+                      <p
+                        className={cn(
+                          "text-sm font-medium mb-1",
+                          isSuccessful
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : "text-purple-600 dark:text-purple-400"
+                        )}
+                      >
+                        {isSuccessful ? "Final Supporters" : "Supporters"}
                       </p>
-                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      <p
+                        className={cn(
+                          "text-2xl font-bold",
+                          isSuccessful
+                            ? "text-yellow-800 dark:text-yellow-200"
+                            : "text-purple-800 dark:text-purple-200"
+                        )}
+                      >
                         {campaign.supporters}
                       </p>
+                      {isSuccessful && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          Goal: {campaign.minRequiredSales}
+                        </p>
+                      )}
                     </div>
-                    <div className="transition-transform duration-300 group-hover:scale-110">
-                      <Users className="w-8 h-8 text-purple-500" />
+                    <div
+                      className={cn(
+                        "transition-transform duration-300 group-hover:scale-110",
+                        isSuccessful && "animate-bounce"
+                      )}
+                    >
+                      {isSuccessful ? (
+                        <Trophy className="w-8 h-8 text-yellow-500" />
+                      ) : (
+                        <Users className="w-8 h-8 text-purple-500" />
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -682,20 +921,49 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
             </div>
 
             {/* Progress Section */}
-            <Card className="overflow-hidden">
+            <Card
+              className={cn(
+                "overflow-hidden",
+                isSuccessful &&
+                  "border-green-500/30 bg-green-50/30 dark:bg-green-900/10"
+              )}
+            >
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Campaign Progress</h3>
-                    <Badge variant="outline" className="text-sm">
-                      {Math.round(progress)}% Funded
+                    <h3 className="text-lg font-semibold">
+                      {isSuccessful
+                        ? "Campaign Completed"
+                        : "Campaign Progress"}
+                    </h3>
+                    <Badge
+                      className={cn(
+                        "text-sm",
+                        isSuccessful
+                          ? "bg-green-500 text-white"
+                          : "variant-outline"
+                      )}
+                    >
+                      {isSuccessful ? (
+                        <div className="flex items-center gap-1">
+                          <Trophy className="w-3 h-3" />
+                          100% Funded
+                        </div>
+                      ) : (
+                        `${Math.round(progress)}% Funded`
+                      )}
                     </Badge>
                   </div>
-                  <Progress value={progress} className="h-4" />
+                  <Progress
+                    value={isSuccessful ? 100 : progress}
+                    className="h-4"
+                  />
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">
-                        Current Supporters
+                        {isSuccessful
+                          ? "Final Supporters"
+                          : "Current Supporters"}
                       </span>
                       <p className="font-semibold text-lg">
                         {campaign.supporters}
@@ -710,8 +978,21 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{timeRemaining.replace("in ", "")} remaining</span>
+                      {isSuccessful ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-green-600 dark:text-green-400 font-medium">
+                            Successfully Funded!
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4" />
+                          <span>
+                            {timeRemaining.replace("in ", "")} remaining
+                          </span>
+                        </>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Target className="w-4 h-4" />
@@ -967,173 +1248,438 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
           {/* Right Column - Support Card */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
-              {/* Main Support Card */}
-              <Card className="overflow-hidden border-2 border-primary/20 shadow-xl">
-                <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Current Price
-                      </p>
-                      <p className="text-3xl font-bold text-primary">
-                        {campaign.currentPrice}
-                        <span className="text-lg text-muted-foreground ml-1">
-                          {campaign.currency}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-
-                  {/* Price Change Indicator */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <ArrowUpRight className="w-4 h-4 text-green-500" />
-                    <span className="text-green-600 dark:text-green-400">
-                      Next:{" "}
-                      {(
-                        parseFloat(campaign.currentPrice) +
-                        Number(campaign.currentPrice) * 0.1
-                      ).toFixed(2)}{" "}
-                      {campaign.currency}
-                    </span>
-                  </div>
-                </div>
-
-                <CardContent className="p-6 space-y-6">
-                  {/* Progress Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        Campaign Progress
-                      </span>
-                      <Badge variant="outline">{Math.round(progress)}%</Badge>
-                    </div>
-                    <Progress value={progress} className="h-3" />
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-lg font-bold">
-                          {campaign.supporters}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Supporters
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/50">
-                        <p className="text-lg font-bold">
-                          {timeRemaining.replace("in ", "").split(" ")[0]}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Days Left
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Campaign Stats */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Total Raised
-                      </span>
-                      <span className="font-semibold">
-                        {campaign.totalRaised} {campaign.currency}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Max Supply
-                      </span>
-                      <span className="font-semibold">
-                        {campaign.maxSupply} NFTs
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Remaining
-                      </span>
-                      <span className="font-semibold">
-                        {campaign.maxSupply - campaign.supporters} NFTs
-                      </span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Main CTA Button */}
-                  <Button
-                    className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
-                    size="lg"
-                    onClick={handleSupport}
-                    disabled={
-                      isPending ||
-                      isConfirming ||
-                      !campaign.contractAddress ||
-                      campaign.contractAddress === "undefined" ||
-                      campaign.contractAddress ===
-                        "0x0000000000000000000000000000000000000000"
-                    }
-                  >
-                    {isPending || isConfirming ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        {isPending ? "Submitting..." : "Confirming..."}
-                      </>
-                    ) : !campaign.contractAddress ||
-                      campaign.contractAddress === "undefined" ||
-                      campaign.contractAddress ===
-                        "0x0000000000000000000000000000000000000000" ? (
-                      <>
-                        <AlertCircle className="mr-2 h-5 w-5" />
-                        Contract Not Deployed
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-2 h-5 w-5" />
-                        Support This Project
-                      </>
-                    )}
-                  </Button>
-
-                  {/* NFT Receipt Info */}
-                  <div className="bg-primary/5 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Shield className="w-5 h-5 text-primary mt-0.5" />
+              {isSuccessful ? (
+                /* Success State Card */
+                <Card className="overflow-hidden border-2 border-green-500/30 shadow-xl">
+                  <div className="bg-gradient-to-r from-green-500/20 via-emerald-500/10 to-background p-6">
+                    <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-sm font-medium mb-1">NFT Receipt</p>
-                        <p className="text-xs text-muted-foreground">
-                          You'll receive a unique NFT as proof of your support,
-                          with exclusive perks and benefits.
+                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Campaign Status
+                        </p>
+                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                          Successfully Funded! 🎉
                         </p>
                       </div>
+                      <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center animate-pulse">
+                        <Trophy className="w-6 h-6 text-green-600 dark:text-green-400" />
+                      </div>
+                    </div>
+
+                    {/* Success Stats */}
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>
+                        Goal achieved with {campaign.supporters} supporters!
+                      </span>
                     </div>
                   </div>
 
-                  {/* Warning Messages */}
-                  {(!campaign.contractAddress ||
-                    campaign.contractAddress === "undefined") && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
-                            Contract Pending
+                  <CardContent className="p-6 space-y-6">
+                    {/* Final Stats */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Final Results
+                        </span>
+                        <Badge className="bg-green-500 text-white">
+                          100% Complete
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                          <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                            {campaign.totalRaised}
                           </p>
-                          <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                            Smart contract is being deployed. Check back soon to
-                            support this campaign.
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Total Raised
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                          <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                            {campaign.supporters}
+                          </p>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Supporters
                           </p>
                         </div>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
 
-              {/* Quick Actions */}
+                    <Separator />
+
+                    {/* Success Message */}
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+                      <Trophy className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">
+                        Congratulations to the Creator!
+                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        This campaign exceeded its goal thanks to amazing
+                        supporters like you.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    {/* Call to Action */}
+                    <Button
+                      className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
+                      size="lg"
+                      onClick={handleShare}
+                    >
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share Success Story
+                    </Button>
+
+                    {isSuccessful && (
+                      <div className="mb-8">
+                        {isCreator && (
+                          <div className="mt-8">
+                            <CreatorWithdrawalEnhanced
+                              contractAddress={campaign.contractAddress}
+                              paymentToken={campaign.currency}
+                              campaignName={campaign.name}
+                              isCreator={true}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* NFT Receipt Info */}
+                    <div className="bg-primary/5 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium mb-1">
+                            NFT Receipts
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            All supporters received unique NFTs as proof of
+                            their contribution to this successful campaign.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : campaignDbStatus === "FAILED" ? (
+                /* Failure State Card */
+                <Card className="overflow-hidden border-2 border-red-500/30 shadow-xl">
+                  <div className="bg-gradient-to-r from-red-500/20 via-red-500/10 to-background p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                          Campaign Status
+                        </p>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                          Campaign Failed
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                      </div>
+                    </div>
+
+                    {/* Failure Message */}
+                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>This campaign did not reach its funding goal.</span>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-6 space-y-6">
+                    {/* Failure Stats */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          Final Results
+                        </span>
+                        <Badge className="bg-red-500 text-white">Failed</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                          <p className="text-lg font-bold text-red-700 dark:text-red-300">
+                            {campaign.totalRaised}
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            Total Raised
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                          <p className="text-lg font-bold text-red-700 dark:text-red-300">
+                            {campaign.supporters}
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            Supporters
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Progress to Goal */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          Progress to Goal
+                        </span>
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                          {Math.round(
+                            (campaign.supporters / campaign.minRequiredSales) *
+                              100
+                          )}
+                          %
+                        </span>
+                      </div>
+                      <Progress
+                        value={
+                          (campaign.supporters / campaign.minRequiredSales) *
+                          100
+                        }
+                        className="h-3"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{campaign.supporters} supporters</span>
+                        <span>{campaign.minRequiredSales} goal</span>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Shortfall Information */}
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                          {campaign.minRequiredSales - campaign.supporters}{" "}
+                          supporters short of goal
+                        </span>
+                      </div>
+                      <p className="text-xs text-orange-600 dark:text-orange-300">
+                        This campaign needed {campaign.minRequiredSales}{" "}
+                        supporters but only reached {campaign.supporters}.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    {/* What Happens Next */}
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                        What Happens Next?
+                      </h3>
+                      <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-start gap-2">
+                          <RefreshCw className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Supporters can claim full refunds for their
+                            contributions
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Creator can try launching a new campaign with
+                            adjusted goals
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Share2 className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Lessons learned can help improve future campaigns
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Supporter Refund Component */}
+                    {!isCreator && (
+                      <div className="space-y-3">
+                        <SupporterRefund
+                          contractAddress={campaign.contractAddress}
+                          paymentToken={campaign.currency}
+                          campaignName={campaign.name}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Active State Card */
+                <Card className="overflow-hidden border-2 border-primary/20 shadow-xl">
+                  <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Current Price
+                        </p>
+                        <p className="text-3xl font-bold text-primary">
+                          {campaign.currentPrice}
+                          <span className="text-lg text-muted-foreground ml-1">
+                            {campaign.currency}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-primary" />
+                      </div>
+                    </div>
+
+                    {/* Price Change Indicator */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="text-green-600 dark:text-green-400">
+                        Next:{" "}
+                        {(
+                          parseFloat(campaign.currentPrice) +
+                          Number(campaign.currentPrice) * 0.1
+                        ).toFixed(2)}{" "}
+                        {campaign.currency}
+                      </span>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-6 space-y-6">
+                    {/* Progress Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          Campaign Progress
+                        </span>
+                        <Badge variant="outline">{Math.round(progress)}%</Badge>
+                      </div>
+                      <Progress value={progress} className="h-3" />
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="p-3 rounded-lg bg-muted/50">
+                          <p className="text-lg font-bold">
+                            {campaign.supporters}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Supporters
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50">
+                          <p className="text-lg font-bold">
+                            {timeRemaining.replace("in ", "").split(" ")[0]}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Days Left
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Campaign Stats */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Total Raised
+                        </span>
+                        <span className="font-semibold">
+                          {campaign.totalRaised} {campaign.currency}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Max Supply
+                        </span>
+                        <span className="font-semibold">
+                          {campaign.maxSupply} NFTs
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Remaining
+                        </span>
+                        <span className="font-semibold">
+                          {campaign.maxSupply - campaign.supporters} NFTs
+                        </span>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Main CTA Button */}
+                    <Button
+                      className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-lg font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
+                      size="lg"
+                      onClick={handleSupport}
+                      disabled={
+                        isPending ||
+                        isConfirming ||
+                        !campaign.contractAddress ||
+                        campaign.contractAddress === "undefined" ||
+                        campaign.contractAddress ===
+                          "0x0000000000000000000000000000000000000000"
+                      }
+                    >
+                      {isPending || isConfirming ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          {isPending ? "Submitting..." : "Confirming..."}
+                        </>
+                      ) : !campaign.contractAddress ||
+                        campaign.contractAddress === "undefined" ||
+                        campaign.contractAddress ===
+                          "0x0000000000000000000000000000000000000000" ? (
+                        <>
+                          <AlertCircle className="mr-2 h-5 w-5" />
+                          Contract Not Deployed
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="mr-2 h-5 w-5" />
+                          Support This Project
+                        </>
+                      )}
+                    </Button>
+
+                    {/* NFT Receipt Info */}
+                    <div className="bg-primary/5 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium mb-1">
+                            NFT Receipt
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            You'll receive a unique NFT as proof of your
+                            support, with exclusive perks and benefits.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Warning Messages */}
+                    {(!campaign.contractAddress ||
+                      campaign.contractAddress === "undefined") && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+                              Contract Pending
+                            </p>
+                            <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                              Smart contract is being deployed. Check back soon
+                              to support this campaign.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Quick Actions - Different for success state */}
               <Card>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -1146,7 +1692,21 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
                     </Button>
-                    <Button variant="outline" size="sm" className="h-12">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-12"
+                      onClick={() => {
+                        toast({
+                          title: isSuccessful
+                            ? "Campaign saved! 💚"
+                            : "Campaign saved!",
+                          description: isSuccessful
+                            ? "This successful campaign has been added to your saved list."
+                            : "This campaign has been added to your saved list.",
+                        });
+                      }}
+                    >
                       <Heart className="w-4 h-4 mr-2" />
                       Save
                     </Button>

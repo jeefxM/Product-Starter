@@ -9,14 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   TrendingUp,
+  Filter,
 } from "lucide-react";
 import Link from "next/link";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { setFrameReady, isFrameReady } = useMiniKit();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -57,19 +61,45 @@ export default function HomePage() {
                 Support innovative projects and collect exclusive NFT receipts
               </p>
             </div>
-            <Badge variant="secondary" className="text-sm px-4 py-2">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Live Now
-            </Badge>
+            <div className="flex items-center gap-3">
+              {(searchTerm || selectedCategory || selectedStatus) && (
+                <Badge variant="outline" className="text-sm px-3 py-1.5">
+                  <Filter className="w-3 h-3 mr-1" />
+                  {searchTerm && `Search: "${searchTerm}"`}
+                  {searchTerm && selectedCategory && " • "}
+                  {selectedCategory && `Category: ${selectedCategory}`}
+                  {(searchTerm || selectedCategory) && selectedStatus && " • "}
+                  {selectedStatus && `Status: ${selectedStatus}`}
+                </Badge>
+              )}
+              <Badge variant="secondary" className="text-sm px-4 py-2">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Live Now
+              </Badge>
+            </div>
           </div>
 
           {/* Search and Filters */}
           <div className="mb-6">
-            <SearchFilters />
+            <SearchFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+            />
           </div>
 
           {/* Campaign Grid */}
-          <CampaignGrid />
+          <CampaignGrid
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+          />
         </section>
       </main>
 

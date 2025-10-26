@@ -63,8 +63,15 @@ export function CreateCampaignForm() {
   });
   const { toast } = useToast();
   const { address, isConnected } = useAccount();
-  const { launchCampaign, isPending, isConfirming, isConfirmed, hash, error, createdCampaignId } =
-    useLaunchCampaign();
+  const {
+    launchCampaign,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    hash,
+    error,
+    createdCampaignId,
+  } = useLaunchCampaign();
   const { edgestore } = useEdgeStore();
 
   const handleFileUpload = async (selectedFile: File) => {
@@ -131,10 +138,9 @@ export function CreateCampaignForm() {
     setLoading(true);
 
     try {
-      // Calculate presale timestamp (duration in days from now)
+      // Calculate presale timestamp (10 minutes from now for testing)
       const presaleTimestamp = BigInt(
-        Math.floor(Date.now() / 1000) +
-          parseInt(formData.duration) * 24 * 60 * 60
+        Math.floor(Date.now() / 1000) + 10 * 60 // 10 minutes in seconds
       );
 
       // Launch campaign on-chain (database save happens automatically in the hook)
@@ -230,7 +236,8 @@ export function CreateCampaignForm() {
                   Wallet Not Connected
                 </h3>
                 <p className="text-orange-700 dark:text-orange-300 text-sm">
-                  Please connect your wallet to launch a product campaign on the blockchain.
+                  Please connect your wallet to launch a product campaign on the
+                  blockchain.
                 </p>
               </div>
             </div>
@@ -280,7 +287,9 @@ export function CreateCampaignForm() {
                 placeholder="e.g., PROD"
                 maxLength={10}
                 value={formData.symbol}
-                onChange={(e) => updateFormData("symbol", e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  updateFormData("symbol", e.target.value.toUpperCase())
+                }
                 className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-300"
                 required
               />
@@ -359,14 +368,18 @@ export function CreateCampaignForm() {
                           style={{ width: `${uploadProgress}%` }}
                         ></div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-2">{uploadProgress}%</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {uploadProgress}%
+                      </p>
                     </>
                   ) : (
                     <>
                       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
                         <ImageIcon className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <p className="text-base font-medium mb-2">Upload Product Image</p>
+                      <p className="text-base font-medium mb-2">
+                        Upload Product Image
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         Click to upload or drag and drop
                       </p>
@@ -557,16 +570,24 @@ export function CreateCampaignForm() {
                 <span className="text-muted-foreground">After 10 mints:</span>
                 <span className="font-medium">
                   {formData.startingPrice && formData.priceIncrement
-                    ? (parseFloat(formData.startingPrice) + parseFloat(formData.priceIncrement) * 10).toFixed(2)
-                    : "0.00"} {formData.paymentToken}
+                    ? (
+                        parseFloat(formData.startingPrice) +
+                        parseFloat(formData.priceIncrement) * 10
+                      ).toFixed(2)
+                    : "0.00"}{" "}
+                  {formData.paymentToken}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">After 100 mints:</span>
                 <span className="font-medium">
                   {formData.startingPrice && formData.priceIncrement
-                    ? (parseFloat(formData.startingPrice) + parseFloat(formData.priceIncrement) * 100).toFixed(2)
-                    : "0.00"} {formData.paymentToken}
+                    ? (
+                        parseFloat(formData.startingPrice) +
+                        parseFloat(formData.priceIncrement) * 100
+                      ).toFixed(2)
+                    : "0.00"}{" "}
+                  {formData.paymentToken}
                 </span>
               </div>
             </div>
@@ -608,11 +629,22 @@ export function CreateCampaignForm() {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
               <span>
-                Campaign will end on {formData.duration
-                  ? new Date(Date.now() + parseInt(formData.duration) * 24 * 60 * 60 * 1000).toLocaleDateString()
-                  : 'Select duration'
-                }
+                Campaign will end on{" "}
+                {formData.duration
+                  ? new Date(
+                      Date.now() +
+                        parseInt(formData.duration) * 24 * 60 * 60 * 1000
+                    ).toLocaleDateString()
+                  : "Select duration"}
               </span>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  🧪 Testing Mode: Campaign will end in 10 minutes
+                </span>
+              </div>
             </div>
           </div>
 
@@ -626,13 +658,17 @@ export function CreateCampaignForm() {
             </div>
             <div className="bg-green-500/5 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600 mb-1">
-                {formData.duration ? Math.ceil(parseInt(formData.duration) * 0.7) : "0"}
+                {formData.duration
+                  ? Math.ceil(parseInt(formData.duration) * 0.7)
+                  : "0"}
               </div>
               <div className="text-sm text-muted-foreground">Optimal End</div>
             </div>
             <div className="bg-orange-500/5 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-orange-600 mb-1">
-                {formData.duration ? Math.ceil(parseInt(formData.duration) * 0.3) : "0"}
+                {formData.duration
+                  ? Math.ceil(parseInt(formData.duration) * 0.3)
+                  : "0"}
               </div>
               <div className="text-sm text-muted-foreground">Push Period</div>
             </div>
@@ -654,8 +690,9 @@ export function CreateCampaignForm() {
                   Secure & Transparent
                 </h3>
                 <p className="text-green-700 dark:text-green-300 text-sm">
-                  Your campaign will be deployed on the Sepolia testnet with a secure smart contract.
-                  All transactions are transparent and supporters receive unique NFT receipts.
+                  Your campaign will be deployed on the Sepolia testnet with a
+                  secure smart contract. All transactions are transparent and
+                  supporters receive unique NFT receipts.
                 </p>
               </div>
             </div>
@@ -667,7 +704,9 @@ export function CreateCampaignForm() {
           type="submit"
           className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group disabled:opacity-50"
           size="lg"
-          disabled={loading || isPending || isConfirming || !isConnected || !imageUrl}
+          disabled={
+            loading || isPending || isConfirming || !isConnected || !imageUrl
+          }
         >
           {loading || isPending || isConfirming ? (
             <>
@@ -677,18 +716,36 @@ export function CreateCampaignForm() {
                   <>
                     <span>Confirming Transaction</span>
                     <div className="flex gap-1">
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      ></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      ></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      ></div>
                     </div>
                   </>
                 ) : (
                   <>
                     <span>Launching Campaign</span>
                     <div className="flex gap-1">
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1 h-1 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      ></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      ></div>
+                      <div
+                        className="w-1 h-1 bg-white/60 rounded-full animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      ></div>
                     </div>
                   </>
                 )}
@@ -705,7 +762,8 @@ export function CreateCampaignForm() {
 
         {/* Help Text */}
         <p className="text-center text-sm text-muted-foreground">
-          By launching, you agree to deploy a smart contract and create NFT receipts for your supporters.
+          By launching, you agree to deploy a smart contract and create NFT
+          receipts for your supporters.
         </p>
       </div>
     </form>

@@ -1,6 +1,6 @@
 import { createConfig } from "@privy-io/wagmi";
 import { mainnet, sepolia } from "viem/chains";
-import { http } from "wagmi";
+import { http, fallback } from "wagmi";
 
 // Token addresses on Sepolia testnet
 export const TOKENS = {
@@ -17,7 +17,16 @@ export const TOKENS = {
 export const config = createConfig({
   chains: [mainnet, sepolia],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
+    [mainnet.id]: fallback([
+      http("https://eth.llamarpc.com"),
+      http("https://rpc.ankr.com/eth"),
+      http("https://ethereum.publicnode.com"),
+    ]),
+    [sepolia.id]: fallback([
+      // http("https://sepolia.drpc.org"),
+      http("https://rpc.ankr.com/eth_sepolia"),
+      http("https://ethereum-sepolia.publicnode.com"),
+      http("https://sepolia.gateway.tenderly.co"),
+    ]),
   },
 });

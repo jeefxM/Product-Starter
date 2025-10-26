@@ -2,10 +2,9 @@
 
 import { CampaignCard } from "./campaign-card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Rocket, Plus } from "lucide-react";
+import { Loader2, AlertCircle, Rocket, Plus, Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { usePublicClient } from "wagmi";
 import CampaignNFTABI from "@/lib/ABI/CampaignNFTABI.json";
 import Link from "next/link";
 
@@ -23,20 +22,72 @@ interface Campaign {
   endDate: Date;
   category: string;
   status: "active" | "funded" | "ending-soon";
+  dbStatus?: "LIVE" | "SUCCESS" | "FAILED";
   totalRaised: string;
   contractAddress: string;
   creatorAvatar: string;
   hasPerks?: boolean;
 }
 
-export function CampaignGrid() {
+interface CampaignGridProps {
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (value: string) => void;
+  selectedStatus: string;
+  setSelectedStatus: (value: string) => void;
+}
+
+export function CampaignGrid({
+  searchTerm,
+  setSearchTerm,
+  selectedCategory,
+  setSelectedCategory,
+  selectedStatus,
+  setSelectedStatus,
+}: CampaignGridProps) {
+  const publicClient = usePublicClient();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCampaigns();
   }, []);
+
+  // Apply filters whenever campaigns, search term, category, or status changes
+  useEffect(() => {
+    let filtered = campaigns;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (campaign) =>
+          campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          campaign.description
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          campaign.creator.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter((campaign) =>
+        campaign.category.toLowerCase().includes(selectedCategory.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (selectedStatus) {
+      filtered = filtered.filter(
+        (campaign) => campaign.status === selectedStatus
+      );
+    }
+
+    setFilteredCampaigns(filtered);
+  }, [campaigns, searchTerm, selectedCategory, selectedStatus]);
 
   const fetchCampaigns = async () => {
     try {
@@ -48,11 +99,7 @@ export function CampaignGrid() {
         throw new Error(result.error || "Failed to fetch campaigns");
       }
 
-      // Create public client for blockchain calls
-      const publicClient = createPublicClient({
-        chain: sepolia,
-        transport: http(),
-      });
+      // Use wagmi's public client with fallback RPC providers
 
       // Fetch real-time prices from blockchain for each campaign
       const campaignsWithPrices = await Promise.all(
@@ -91,7 +138,7 @@ export function CampaignGrid() {
             image: campaign.imageUrl || "/placeholder.svg?height=200&width=300",
             currentPrice,
             currency: "PYUSD", // Display name instead of contract address
-            supporters: 0,
+            supporters: campaign.totalEverMinted || 0,
             minRequiredSales: campaign.minRequiredSales,
             maxSupply: campaign.maxSupply,
             endDate: new Date(
@@ -102,7 +149,10 @@ export function CampaignGrid() {
               campaign.status === "LIVE"
                 ? ("active" as const)
                 : ("active" as const),
-            totalRaised: "0",
+            dbStatus: campaign.status as "LIVE" | "SUCCESS" | "FAILED",
+            totalRaised: campaign.totalEarnedByCreator
+              ? (Number(campaign.totalEarnedByCreator) / 1000000).toFixed(2)
+              : "0",
             contractAddress: campaign.contractAddress,
             creatorAvatar: "/placeholder.svg?height=40&width=40",
             hasPerks: true,
@@ -111,6 +161,7 @@ export function CampaignGrid() {
       );
 
       setCampaigns(campaignsWithPrices);
+      setFilteredCampaigns(campaignsWithPrices);
     } catch (err) {
       console.error("Error fetching campaigns:", err);
       setError(
@@ -134,14 +185,19 @@ export function CampaignGrid() {
         </div>
         <h3 className="text-2xl font-bold mb-3">Failed to load campaigns</h3>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          {error || "We encountered an error while loading campaigns. Please try again."}
+          {error ||
+            "We encountered an error while loading campaigns. Please try again."}
         </p>
         <div className="flex flex-col sm:flex-row gap-4">
           <Button onClick={fetchCampaigns} size="lg">
             <Loader2 className="w-4 h-4 mr-2" />
             Try Again
           </Button>
-          <Button variant="outline" size="lg" onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => window.location.reload()}
+          >
             Refresh Page
           </Button>
         </div>
@@ -185,7 +241,9 @@ export function CampaignGrid() {
         {/* Loading Indicator */}
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
-          <span className="text-lg font-medium">Loading amazing campaigns...</span>
+          <span className="text-lg font-medium">
+            Loading amazing campaigns...
+          </span>
         </div>
       </div>
     );
@@ -199,10 +257,52 @@ export function CampaignGrid() {
         </div>
         <h3 className="text-2xl font-bold mb-3">No campaigns found</h3>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          Be the first to launch a product campaign and start your journey today!
+          Be the first to launch a product campaign and start your journey
+          today!
         </p>
         <Link href="/create">
-          <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80">
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-primary to-primary/80"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Campaign
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Show no results when filters are applied but no campaigns match
+  if (
+    filteredCampaigns.length === 0 &&
+    (searchTerm || selectedCategory || selectedStatus)
+  ) {
+    return (
+      <div className="text-center py-20">
+        <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Search className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h3 className="text-2xl font-bold mb-3">
+          No campaigns match your filters
+        </h3>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          Try adjusting your search terms or filters to find campaigns.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setSearchTerm("");
+            setSelectedCategory("");
+            setSelectedStatus("");
+          }}
+          className="mr-2"
+        >
+          <X className="w-4 h-4 mr-2" />
+          Clear Filters
+        </Button>
+        <Link href="/create">
+          <Button variant="outline">
             <Plus className="w-4 h-4 mr-2" />
             Create Campaign
           </Button>
@@ -213,8 +313,31 @@ export function CampaignGrid() {
 
   return (
     <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground">
+          {filteredCampaigns.length} campaign
+          {filteredCampaigns.length !== 1 ? "s" : ""} found
+          {(searchTerm || selectedCategory || selectedStatus) && (
+            <span> matching your filters</span>
+          )}
+        </p>
+        {(searchTerm || selectedCategory || selectedStatus) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedCategory("");
+              setSelectedStatus("");
+            }}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => (
+        {filteredCampaigns.map((campaign) => (
           <CampaignCard key={campaign.id} campaign={campaign} />
         ))}
       </div>

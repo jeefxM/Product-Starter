@@ -1,5 +1,5 @@
 import type { PrivyClientConfig } from "@privy-io/react-auth";
-import { mainnet, base } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 
 export const privyConfig: PrivyClientConfig = {
   embeddedWallets: {
@@ -14,7 +14,7 @@ export const privyConfig: PrivyClientConfig = {
     accentColor: "#8b5cf6",
   },
   // Support the same chains as wagmi config
-  supportedChains: [mainnet, base],
+  supportedChains: [mainnet, sepolia],
 };
 
 // Privy App ID - should be passed to PrivyProvider separately
