@@ -24,9 +24,9 @@ export const config = createConfig({
     ]),
     [sepolia.id]: fallback([
       http("https://eth-sepolia.g.alchemy.com/v2/nQIUgnAxb_VZAKBbZZNVC"),
-      http("https://rpc.ankr.com/eth_sepolia"),
-      http("https://ethereum-sepolia.publicnode.com"),
-      http("https://sepolia.gateway.tenderly.co"),
+      // http("https://rpc.ankr.com/eth_sepolia"),
+      // http("https://ethereum-sepolia.publicnode.com"),
+      // http("https://sepolia.gateway.tenderly.co"),
     ]),
   },
 });
