@@ -57,6 +57,7 @@ export function CreateCampaignForm() {
     fundingGoal: "",
     maxSupply: "",
     duration: "",
+    durationUnit: "days",
     startingPrice: "",
     priceIncrement: "",
     paymentToken: "PYUSD",
@@ -73,6 +74,21 @@ export function CreateCampaignForm() {
     createdCampaignId,
   } = useLaunchCampaign();
   const { edgestore } = useEdgeStore();
+
+  // Helper function to convert duration to seconds
+  const getDurationInSeconds = (duration: string, unit: string): number => {
+    const value = parseInt(duration) || 0;
+    switch (unit) {
+      case "minutes":
+        return value * 60;
+      case "hours":
+        return value * 60 * 60;
+      case "days":
+        return value * 24 * 60 * 60;
+      default:
+        return value * 24 * 60 * 60; // Default to days
+    }
+  };
 
   const handleFileUpload = async (selectedFile: File) => {
     if (!selectedFile) return;
@@ -138,9 +154,13 @@ export function CreateCampaignForm() {
     setLoading(true);
 
     try {
-      // Calculate presale timestamp (10 minutes from now for testing)
+      // Calculate presale timestamp based on user input
+      const durationSeconds = getDurationInSeconds(
+        formData.duration,
+        formData.durationUnit
+      );
       const presaleTimestamp = BigInt(
-        Math.floor(Date.now() / 1000) + 10 * 60 // 10 minutes in seconds
+        Math.floor(Date.now() / 1000) + durationSeconds
       );
 
       // Launch campaign on-chain (database save happens automatically in the hook)
@@ -613,19 +633,40 @@ export function CreateCampaignForm() {
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <Label htmlFor="duration" className="text-base font-medium">
-              Campaign Duration (days) <span className="text-red-500">*</span>
+              Campaign Duration <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="duration"
-              type="number"
-              placeholder="30"
-              min="1"
-              max="365"
-              value={formData.duration}
-              onChange={(e) => updateFormData("duration", e.target.value)}
-              className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-300"
-              required
-            />
+            <div className="flex gap-3">
+              <Input
+                id="duration"
+                type="number"
+                placeholder="30"
+                min="1"
+                max={
+                  formData.durationUnit === "minutes"
+                    ? 10080
+                    : formData.durationUnit === "hours"
+                    ? 168
+                    : 365
+                }
+                value={formData.duration}
+                onChange={(e) => updateFormData("duration", e.target.value)}
+                className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-300 flex-1"
+                required
+              />
+              <Select
+                value={formData.durationUnit}
+                onValueChange={(value) => updateFormData("durationUnit", value)}
+              >
+                <SelectTrigger className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-300 w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="minutes">Minutes</SelectItem>
+                  <SelectItem value="hours">Hours</SelectItem>
+                  <SelectItem value="days">Days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
               <span>
@@ -633,16 +674,24 @@ export function CreateCampaignForm() {
                 {formData.duration
                   ? new Date(
                       Date.now() +
-                        parseInt(formData.duration) * 24 * 60 * 60 * 1000
+                        getDurationInSeconds(
+                          formData.duration,
+                          formData.durationUnit
+                        ) *
+                          1000
                     ).toLocaleDateString()
                   : "Select duration"}
               </span>
             </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  🧪 Testing Mode: Campaign will end in 10 minutes
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium">
+                  Campaign will run for {formData.duration || "0"}{" "}
+                  {formData.durationUnit}
+                  {formData.duration && parseInt(formData.duration) !== 1
+                    ? "s"
+                    : ""}
                 </span>
               </div>
             </div>
@@ -654,7 +703,9 @@ export function CreateCampaignForm() {
               <div className="text-2xl font-bold text-primary mb-1">
                 {formData.duration || "0"}
               </div>
-              <div className="text-sm text-muted-foreground">Days Total</div>
+              <div className="text-sm text-muted-foreground capitalize">
+                {formData.durationUnit} Total
+              </div>
             </div>
             <div className="bg-green-500/5 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600 mb-1">
@@ -662,7 +713,9 @@ export function CreateCampaignForm() {
                   ? Math.ceil(parseInt(formData.duration) * 0.7)
                   : "0"}
               </div>
-              <div className="text-sm text-muted-foreground">Optimal End</div>
+              <div className="text-sm text-muted-foreground capitalize">
+                Optimal End ({formData.durationUnit})
+              </div>
             </div>
             <div className="bg-orange-500/5 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-orange-600 mb-1">
@@ -670,7 +723,9 @@ export function CreateCampaignForm() {
                   ? Math.ceil(parseInt(formData.duration) * 0.3)
                   : "0"}
               </div>
-              <div className="text-sm text-muted-foreground">Push Period</div>
+              <div className="text-sm text-muted-foreground capitalize">
+                Push Period ({formData.durationUnit})
+              </div>
             </div>
           </div>
         </CardContent>
