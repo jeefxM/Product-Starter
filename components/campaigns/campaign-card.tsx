@@ -83,6 +83,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
       minRequiredSales: campaign.minRequiredSales,
       progress: progress.toFixed(2) + "%",
       currentPrice: campaign.currentPrice,
+      dbStatus: campaign.dbStatus,
+      isSuccessful: campaign.dbStatus === "SUCCESS" || progress >= 100,
     });
   }, [
     campaign.supporters,
@@ -90,6 +92,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     campaign.currentPrice,
     campaign.name,
     progress,
+    campaign.dbStatus,
   ]);
   // Use the same time calculation as campaign details for consistency
   // Convert endDate to Unix timestamp in seconds for formatTimeRemaining
@@ -194,13 +197,13 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const handleShare = () => {
     const campaignUrl = `${window.location.origin}/campaign/${campaign.id}`;
     const text = isSuccessful
-      ? `🎉 Amazing! ${campaign.name} has been successfully funded with ${campaign.supporters} supporters!`
+      ? `🎉 Amazing! ${campaign.name} has been successfully completed with ${campaign.supporters} supporters!`
       : `Check out ${campaign.name} - A great campaign that needs your support!`;
 
     if (navigator.share) {
       navigator.share({
         title: `${campaign.name} ${
-          isSuccessful ? "- Successfully Funded!" : ""
+          isSuccessful ? "- Successfully Completed!" : ""
         }`,
         text: text,
         url: campaignUrl,
@@ -398,7 +401,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                   : `${Math.round(progress)}%`}
               </div>
               <div className="text-xs text-muted-foreground">
-                {isSuccessful ? "Funded! 🎉" : isFailed ? "Failed" : "Funded"}
+                {isSuccessful ? "Success! 🎉" : isFailed ? "Failed" : "Success"}
               </div>
             </div>
           </div>
@@ -450,7 +453,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                 <>
                   <CheckCircle className="w-4 h-4 text-green-500" />
                   <span className="text-green-600 dark:text-green-400 font-medium">
-                    Successfully Funded!
+                    Successfully Completed!
                   </span>
                 </>
               ) : isFailed ? (

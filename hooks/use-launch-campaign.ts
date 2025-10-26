@@ -20,7 +20,9 @@ export function useLaunchCampaign() {
   const publicClient = usePublicClient();
 
   const storedFormData = useRef<any>(null);
-  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(
+    null
+  );
 
   // Validate contract address format
   const isValidContractAddress = (address: string): boolean => {
@@ -186,10 +188,10 @@ export function useLaunchCampaign() {
         symbol: formData.symbol,
         description: formData.description,
         category: formData.category,
-        fundingGoal: formData.fundingGoal,
-        maxSupply: formData.maxSupply,
+        fundingGoal: formData.minRequiredSales, // Use the processed minRequiredSales value
+        maxSupply: formData.maxItems,
         duration: formData.duration,
-        startingPrice: formData.startingPrice,
+        startingPrice: formData.startPrice,
         priceIncrement: formData.priceIncrement,
         paymentToken: formData.paymentToken,
         contractAddress,
@@ -200,6 +202,14 @@ export function useLaunchCampaign() {
       console.log("Saving campaign to database with data:", requestData);
       console.log("Form data received:", formData);
       console.log("Creator address:", formData.creatorAddress);
+      console.log(
+        "🔍 MinRequiredSales value being sent to DB:",
+        formData.minRequiredSales
+      );
+      console.log(
+        "🔍 FundingGoal value being sent to DB:",
+        requestData.fundingGoal
+      );
 
       const response = await fetch("/api/campaigns", {
         method: "POST",

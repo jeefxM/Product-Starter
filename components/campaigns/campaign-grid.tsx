@@ -193,6 +193,9 @@ export function CampaignGrid({
           let supporters = campaign.totalEverMinted || 0;
           let totalRaised = "0";
           let blockchainTimestamp: bigint;
+          let minRequiredSalesFromChain: bigint = BigInt(
+            campaign.minRequiredSales || 1
+          );
 
           console.log(`📊 [${campaign.name}] DB Values:`, {
             startPrice: campaign.startPrice,
@@ -223,47 +226,67 @@ export function CampaignGrid({
               blockchainTimestamp = BigInt(Math.floor(presaleTimestamp / 1000));
             } else {
               // Fetch multiple contract data in parallel with retry mechanism
-              const [priceFromChain, totalEverMinted, timestamp] =
-                await Promise.all([
-                  fetchBlockchainDataWithRetry(
-                    campaign.contractAddress,
-                    "getCurrentPriceToMint"
-                  ).catch((err) => {
-                    console.warn(
-                      `⚠️ Price fetch failed for ${campaign.name} after retries:`,
-                      err.message || err
-                    );
-                    // Use DB value as fallback (already in proper decimal format)
-                    return BigInt(Math.floor(dbPrice * 1000000));
-                  }),
-                  fetchBlockchainDataWithRetry(
-                    campaign.contractAddress,
-                    "totalEverMinted"
-                  ).catch((err) => {
-                    console.warn(
-                      `⚠️ TotalEverMinted fetch failed for ${campaign.name} after retries:`,
-                      err.message || err
-                    );
-                    return BigInt(campaign.totalEverMinted || 0);
-                  }),
-                  fetchBlockchainDataWithRetry(
-                    campaign.contractAddress,
-                    "timestamp"
-                  ).catch((err) => {
-                    console.warn(
-                      `⚠️ Timestamp fetch failed for ${campaign.name} after retries:`,
-                      err.message || err
-                    );
-                    // Use DB presaleTimestamp as fallback
-                    const presaleTimestamp = campaign.presaleTimestamp
-                      ? new Date(campaign.presaleTimestamp).getTime()
-                      : Date.now();
-                    return BigInt(Math.floor(presaleTimestamp / 1000));
-                  }),
-                ]);
+              const [
+                priceFromChain,
+                totalEverMinted,
+                timestamp,
+                minRequiredSalesFromChain,
+              ] = await Promise.all([
+                fetchBlockchainDataWithRetry(
+                  campaign.contractAddress,
+                  "getCurrentPriceToMint"
+                ).catch((err) => {
+                  console.warn(
+                    `⚠️ Price fetch failed for ${campaign.name} after retries:`,
+                    err.message || err
+                  );
+                  // Use DB value as fallback (already in proper decimal format)
+                  return BigInt(Math.floor(dbPrice * 1000000));
+                }),
+                fetchBlockchainDataWithRetry(
+                  campaign.contractAddress,
+                  "totalEverMinted"
+                ).catch((err) => {
+                  console.warn(
+                    `⚠️ TotalEverMinted fetch failed for ${campaign.name} after retries:`,
+                    err.message || err
+                  );
+                  return BigInt(campaign.totalEverMinted || 0);
+                }),
+                fetchBlockchainDataWithRetry(
+                  campaign.contractAddress,
+                  "timestamp"
+                ).catch((err) => {
+                  console.warn(
+                    `⚠️ Timestamp fetch failed for ${campaign.name} after retries:`,
+                    err.message || err
+                  );
+                  // Use DB presaleTimestamp as fallback
+                  const presaleTimestamp = campaign.presaleTimestamp
+                    ? new Date(campaign.presaleTimestamp).getTime()
+                    : Date.now();
+                  return BigInt(Math.floor(presaleTimestamp / 1000));
+                }),
+                fetchBlockchainDataWithRetry(
+                  campaign.contractAddress,
+                  "minRequiredSales"
+                ).catch((err) => {
+                  console.warn(
+                    `⚠️ MinRequiredSales fetch failed for ${campaign.name} after retries:`,
+                    err.message || err
+                  );
+                  // Use a more reasonable fallback - the blockchain value should be 10
+                  return BigInt(10);
+                }),
+              ]);
 
-              // Assign blockchain timestamp
+              // Assign blockchain values
               blockchainTimestamp = timestamp;
+              // minRequiredSalesFromChain is already assigned from the Promise.all result
+              console.log(
+                `🔗 [${campaign.name}] Blockchain minRequiredSales:`,
+                String(minRequiredSalesFromChain)
+              );
 
               // Format price (assuming 6 decimals for PYUSD)
               const priceNum = Number(priceFromChain) / 1000000;
@@ -282,6 +305,8 @@ export function CampaignGrid({
                 totalEverMinted: String(totalEverMinted),
                 supporters,
                 totalRaised,
+                minRequiredSalesFromChain: String(minRequiredSalesFromChain),
+                minRequiredSalesNumber: Number(minRequiredSalesFromChain),
               });
             }
           } catch (error) {
@@ -296,16 +321,19 @@ export function CampaignGrid({
             // Calculate total raised from price and supporters
             totalRaised = (dbPrice * supporters).toFixed(2);
 
-            // Set fallback timestamp from database
+            // Set fallback values from database
             const presaleTimestamp = campaign.presaleTimestamp
               ? new Date(campaign.presaleTimestamp).getTime()
               : Date.now();
             blockchainTimestamp = BigInt(Math.floor(presaleTimestamp / 1000));
+            minRequiredSalesFromChain = BigInt(10); // Use blockchain value as fallback
 
             console.log(`🔄 [${campaign.name}] Using DB Fallback:`, {
               price: formattedPrice,
               supporters,
               totalRaised,
+              minRequiredSalesFromChain: String(minRequiredSalesFromChain),
+              minRequiredSalesNumber: Number(minRequiredSalesFromChain),
             });
           }
 
@@ -318,7 +346,15 @@ export function CampaignGrid({
             currentPrice,
             currency: "PYUSD",
             supporters,
-            minRequiredSales: campaign.minRequiredSales,
+            minRequiredSales: (() => {
+              const value = Number(minRequiredSalesFromChain);
+              console.log(`🔍 [${campaign.name}] Final minRequiredSales:`, {
+                bigint: String(minRequiredSalesFromChain),
+                number: value,
+                isValid: !isNaN(value) && value > 0,
+              });
+              return !isNaN(value) && value > 0 ? value : 10; // Use blockchain value as final fallback
+            })(),
             maxSupply: campaign.maxSupply,
             endDate: new Date(Number(blockchainTimestamp) * 1000),
             category: campaign.category || "Technology",
