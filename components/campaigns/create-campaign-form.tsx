@@ -671,7 +671,7 @@ export function CreateCampaignForm() {
                   Campaign will run for {formData.duration || "0"}{" "}
                   {formData.durationUnit}
                   {formData.duration && parseInt(formData.duration) !== 1
-                    ? "s"
+                    ? ""
                     : ""}
                 </span>
               </div>
@@ -679,7 +679,7 @@ export function CreateCampaignForm() {
           </div>
 
           {/* Timeline Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-primary/5 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-primary mb-1">
                 {formData.duration || "0"}
@@ -708,33 +708,12 @@ export function CreateCampaignForm() {
                 Push Period ({formData.durationUnit})
               </div>
             </div>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 
       {/* Submit Section */}
       <div className="space-y-4">
-        {/* Security Notice */}
-        <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/10 dark:border-green-800">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
-                  Secure & Transparent
-                </h3>
-                <p className="text-green-700 dark:text-green-300 text-sm">
-                  Your campaign will be deployed on the Sepolia testnet with a
-                  secure smart contract. All transactions are transparent and
-                  supporters receive unique NFT receipts.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Submit Button */}
         <Button
           type="submit"

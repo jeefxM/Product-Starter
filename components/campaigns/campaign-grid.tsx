@@ -2,15 +2,7 @@
 
 import { CampaignCard } from "./campaign-card";
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  AlertCircle,
-  Rocket,
-  Plus,
-  Search,
-  X,
-  RefreshCw,
-} from "lucide-react";
+import { Loader2, AlertCircle, Rocket, Plus, Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePublicClient } from "wagmi";
 import CampaignNFTABI from "@/lib/ABI/CampaignNFTABI.json";
@@ -59,30 +51,12 @@ export function CampaignGrid({
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCampaigns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only fetch once on mount
-
-  // Periodic blockchain data refresh to prevent reverting to stale DB values
-  useEffect(() => {
-    if (!publicClient || campaigns.length === 0) return;
-
-    const refreshInterval = setInterval(async () => {
-      console.log("🔄 Refreshing blockchain data to prevent stale values...");
-      setRefreshing(true);
-      try {
-        await fetchCampaigns();
-      } finally {
-        setRefreshing(false);
-      }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [publicClient, campaigns.length]);
 
   // Apply filters whenever campaigns, search term, category, or status changes
   useEffect(() => {
@@ -540,16 +514,6 @@ export function CampaignGrid({
           </Button>
         )}
       </div>
-      {/* Refreshing indicator */}
-      {refreshing && (
-        <div className="flex items-center justify-center py-4 bg-blue-50/50 rounded-lg border border-blue-200">
-          <RefreshCw className="w-4 h-4 mr-2 animate-spin text-blue-600" />
-          <span className="text-sm text-blue-600 font-medium">
-            Updating blockchain data...
-          </span>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCampaigns.map((campaign) => (
           <CampaignCard key={campaign.id} campaign={campaign} />

@@ -25,7 +25,7 @@ export default function CreateCampaignPage() {
 
         <div className="relative container py-12 lg:py-20">
           {/* Breadcrumb */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -33,7 +33,7 @@ export default function CreateCampaignPage() {
               <ArrowLeft className="w-4 h-4" />
               Back to Campaigns
             </Link>
-          </div>
+          </div> */}
 
           <div className="max-w-4xl mx-auto">
             {/* Header Section */}
@@ -60,15 +60,15 @@ export default function CreateCampaignPage() {
               <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-yellow-500" />
-                  <span>Instant Deployment</span>
+                  <span>Find your first users</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-green-500" />
-                  <span>Secure Smart Contracts</span>
+                  <span>Onchain project discovery</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Rocket className="w-4 h-4 text-purple-500" />
-                  <span>NFT Receipts</span>
+                  <span>Create buzz about your product</span>
                 </div>
               </div>
             </div>
