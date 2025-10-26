@@ -25,6 +25,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { formatTimeRemaining } from "@/lib/time-utils";
 import { useSupportCampaign } from "@/hooks/use-support-campaign";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef } from "react";
@@ -74,6 +75,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const isHandlingSupportRef = useRef(false);
 
   const progress = (campaign.supporters / campaign.minRequiredSales) * 100;
+  // Use custom time formatting for better accuracy with minutes/hours
   const timeRemaining = formatDistanceToNow(campaign.endDate, {
     addSuffix: true,
   });

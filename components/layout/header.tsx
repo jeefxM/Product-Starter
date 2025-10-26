@@ -3,7 +3,7 @@
 import { ConnectWalletButton } from "@/components/ui/connect-wallet-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Home, User, TrendingUp, Zap, Shield, Star, Bell, Settings } from "lucide-react";
+import { Plus, Home, User, TrendingUp, Bell, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -17,20 +17,20 @@ export function Header() {
       name: "Discover",
       href: "/",
       icon: Home,
-      description: "Explore campaigns"
+      description: "Explore campaigns",
     },
     {
       name: "Create",
       href: "/create",
       icon: Plus,
       description: "Launch a product",
-      badge: "New"
+      badge: "New",
     },
     {
       name: "Dashboard",
       href: "/dashboard",
       icon: User,
-      description: "Your activity"
+      description: "Your activity",
     },
   ];
 
@@ -39,7 +39,11 @@ export function Header() {
       <div className="container mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex h-14 sm:h-16 lg:h-20 items-center justify-between">
           {/* Logo - Mobile Optimized */}
-          <Link href="/" prefetch className="flex items-center space-x-2 sm:space-x-3 group">
+          <Link
+            href="/"
+            prefetch
+            className="flex items-center space-x-2 sm:space-x-3 group"
+          >
             <div className="relative">
               <div className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                 <span className="text-white font-bold text-sm sm:text-base lg:text-lg">
@@ -55,7 +59,7 @@ export function Header() {
                 ProductStarter
               </span>
               <span className="text-xs text-muted-foreground -mt-0.5 hidden sm:block">
-                Web3 Crowdfunding
+                Get discovered. Get early users
               </span>
             </div>
           </Link>
@@ -123,24 +127,6 @@ export function Header() {
 
             {/* Wallet Button */}
             <ConnectWalletButton compact />
-          </div>
-        </div>
-
-        {/* Mobile Navigation Hints */}
-        <div className="hidden sm:block border-t border-border/30 px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <Shield className="w-3 h-3" />
-              <span className="hidden sm:inline">Secure Platform</span>
-              <Star className="w-3 h-3" />
-              <span className="hidden sm:inline">NFT Receipts</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Badge className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
-                <Zap className="w-3 h-3 mr-1" />
-                Live
-              </Badge>
-            </div>
           </div>
         </div>
       </div>

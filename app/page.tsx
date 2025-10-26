@@ -6,11 +6,7 @@ import { CampaignGrid } from "@/components/campaigns/campaign-grid";
 import { SearchFilters } from "@/components/campaigns/search-filters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Plus,
-  TrendingUp,
-  Filter,
-} from "lucide-react";
+import { Plus, TrendingUp, Filter } from "lucide-react";
 import Link from "next/link";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { useEffect, useState } from "react";
@@ -36,9 +32,11 @@ export default function HomePage() {
         {/* Simple Header with CTA */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">ProductStarter</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              ProductStarter
+            </h1>
             <p className="text-muted-foreground">
-              Discover and support innovative products with NFT receipts
+              An innovation discovery platform
             </p>
           </div>
           <Link href="/create">
@@ -52,15 +50,9 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Campaigns Section - Now at the top */}
+        {/* Campaigns Section */}
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold mb-2">Active Campaigns</h2>
-              <p className="text-muted-foreground">
-                Support innovative projects and collect exclusive NFT receipts
-              </p>
-            </div>
             <div className="flex items-center gap-3">
               {(searchTerm || selectedCategory || selectedStatus) && (
                 <Badge variant="outline" className="text-sm px-3 py-1.5">
@@ -72,10 +64,6 @@ export default function HomePage() {
                   {selectedStatus && `Status: ${selectedStatus}`}
                 </Badge>
               )}
-              <Badge variant="secondary" className="text-sm px-4 py-2">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Live Now
-              </Badge>
             </div>
           </div>
 
