@@ -47,7 +47,12 @@ export function SearchFilters({
   const statusOptions = [
     { value: "active", label: "Active", color: "bg-green-500", icon: Zap },
     { value: "funded", label: "Funded", color: "bg-blue-500", icon: Trophy },
-    { value: "ending-soon", label: "Ending Soon", color: "bg-orange-500", icon: Clock },
+    {
+      value: "ending-soon",
+      label: "Ending Soon",
+      color: "bg-orange-500",
+      icon: Clock,
+    },
   ];
 
   const addFilter = (filter: string) => {
@@ -75,7 +80,9 @@ export function SearchFilters({
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
     if (value) {
-      const filter = `Category: ${categories.find(c => c.name.toLowerCase() === value)?.name}`;
+      const filter = `Category: ${
+        categories.find((c) => c.name.toLowerCase() === value)?.name
+      }`;
       addFilter(filter);
     }
   };
@@ -83,7 +90,7 @@ export function SearchFilters({
   const handleStatusChange = (value: string) => {
     setSelectedStatus(value);
     if (value) {
-      const statusOption = statusOptions.find(s => s.value === value);
+      const statusOption = statusOptions.find((s) => s.value === value);
       if (statusOption) {
         addFilter(`Status: ${statusOption.label}`);
       }
@@ -113,20 +120,33 @@ export function SearchFilters({
                 {selectedCategory && (
                   <div className="flex items-center gap-2">
                     <span className="text-lg">
-                      {categories.find(c => c.name.toLowerCase() === selectedCategory)?.icon}
+                      {
+                        categories.find(
+                          (c) => c.name.toLowerCase() === selectedCategory
+                        )?.icon
+                      }
                     </span>
-                    {categories.find(c => c.name.toLowerCase() === selectedCategory)?.name}
+                    {
+                      categories.find(
+                        (c) => c.name.toLowerCase() === selectedCategory
+                      )?.name
+                    }
                   </div>
                 )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {categories.map((category) => (
-                <SelectItem key={category.name} value={category.name.toLowerCase()}>
+                <SelectItem
+                  key={category.name}
+                  value={category.name.toLowerCase()}
+                >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{category.icon}</span>
                     <div className="flex items-center gap-2">
-                      <div className={cn("w-2 h-2 rounded-full", category.color)} />
+                      <div
+                        className={cn("w-2 h-2 rounded-full", category.color)}
+                      />
                       {category.name}
                     </div>
                   </div>
@@ -144,11 +164,16 @@ export function SearchFilters({
                 {selectedStatus && (
                   <div className="flex items-center gap-2">
                     {(() => {
-                      const statusOption = statusOptions.find(s => s.value === selectedStatus);
+                      const statusOption = statusOptions.find(
+                        (s) => s.value === selectedStatus
+                      );
                       const Icon = statusOption?.icon;
                       return Icon ? <Icon className="w-4 h-4" /> : null;
                     })()}
-                    {statusOptions.find(s => s.value === selectedStatus)?.label}
+                    {
+                      statusOptions.find((s) => s.value === selectedStatus)
+                        ?.label
+                    }
                   </div>
                 )}
               </SelectValue>
@@ -180,29 +205,34 @@ export function SearchFilters({
         )}
       </div>
 
-      {/* Popular Categories - Quick Filter */}
+      {/* Quick Filter Buttons */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Star className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">Popular Categories</span>
+          <Zap className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">Quick Filters</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {categories.slice(0, 6).map((category) => (
-            <Badge
-              key={category.name}
-              variant="outline"
-              className={cn(
-                "cursor-pointer hover:border-2 transition-all duration-300 hover:scale-105 px-3 py-1.5",
-                selectedCategory === category.name.toLowerCase()
-                  ? `border-2 ${category.color.replace('bg-', 'border-')} text-white ${category.color}`
-                  : "hover:border-primary/50"
-              )}
-              onClick={() => handleCategoryChange(category.name.toLowerCase())}
-            >
-              <span className="mr-1">{category.icon}</span>
-              {category.name}
-            </Badge>
-          ))}
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:border-2 transition-all duration-300 hover:scale-105 px-3 py-1.5 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 hover:text-orange-800"
+          >
+            <Clock className="w-3 h-3 mr-1" />
+            Ending soon
+          </Badge>
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:border-2 transition-all duration-300 hover:scale-105 px-3 py-1.5 border-red-200 hover:border-red-400 hover:bg-red-50 text-red-700 hover:text-red-800"
+          >
+            <Zap className="w-3 h-3 mr-1" />
+            Hot
+          </Badge>
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:border-2 transition-all duration-300 hover:scale-105 px-3 py-1.5 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800"
+          >
+            <Trophy className="w-3 h-3 mr-1" />
+            Close to goal
+          </Badge>
         </div>
       </div>
 
@@ -212,7 +242,8 @@ export function SearchFilters({
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Active Filters</span>
             <span className="text-xs text-muted-foreground">
-              {activeFilters.length} filter{activeFilters.length > 1 ? 's' : ''} applied
+              {activeFilters.length} filter{activeFilters.length > 1 ? "s" : ""}{" "}
+              applied
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -224,7 +255,7 @@ export function SearchFilters({
                 {filter.includes("Category:") && (
                   <>
                     <span>
-                      {categories.find(c => filter.includes(c.name))?.icon}
+                      {categories.find((c) => filter.includes(c.name))?.icon}
                     </span>
                   </>
                 )}
@@ -232,7 +263,9 @@ export function SearchFilters({
                   <>
                     {(() => {
                       const statusLabel = filter.replace("Status: ", "");
-                      const statusOption = statusOptions.find(s => s.label === statusLabel);
+                      const statusOption = statusOptions.find(
+                        (s) => s.label === statusLabel
+                      );
                       const Icon = statusOption?.icon;
                       return Icon ? <Icon className="w-3 h-3" /> : null;
                     })()}

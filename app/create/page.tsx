@@ -26,7 +26,10 @@ export default function CreateCampaignPage() {
         <div className="relative container py-12 lg:py-20">
           {/* Breadcrumb */}
           <div className="mb-8">
-            <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back to Campaigns
             </Link>
@@ -37,7 +40,9 @@ export default function CreateCampaignPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 backdrop-blur-sm border border-primary/20 rounded-full mb-6">
                 <Rocket className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Campaign Creator</span>
+                <span className="text-sm font-medium text-primary">
+                  Campaign Creator
+                </span>
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
@@ -47,7 +52,8 @@ export default function CreateCampaignPage() {
               </h1>
 
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-                Create a crowdfunding campaign and let supporters mint NFT receipts as proof of their early support
+                launch a campaign and let supporters mint NFT receipts as proof
+                of their early support
               </p>
 
               {/* Features */}

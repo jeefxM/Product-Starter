@@ -54,7 +54,8 @@ export function CampaignGrid({
 
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only fetch once on mount
 
   // Apply filters whenever campaigns, search term, category, or status changes
   useEffect(() => {
@@ -99,35 +100,126 @@ export function CampaignGrid({
         throw new Error(result.error || "Failed to fetch campaigns");
       }
 
-      // Use wagmi's public client with fallback RPC providers
+      // Check if publicClient is available
+      if (!publicClient) {
+        console.warn("Public client not available, using database values only");
+        // Map campaigns with database values only
+        const campaignsWithDbData = result.campaigns.map((campaign: any) => ({
+          id: campaign.id,
+          name: campaign.name,
+          creator: campaign.creatorAddress,
+          description: campaign.description,
+          image: campaign.imageUrl || "/placeholder.svg?height=200&width=300",
+          currentPrice: Number(campaign.startPrice).toFixed(2),
+          currency: "PYUSD",
+          supporters: campaign.totalEverMinted || 0,
+          minRequiredSales: campaign.minRequiredSales,
+          maxSupply: campaign.maxSupply,
+          endDate: new Date(
+            campaign.endDate || Date.now() + 30 * 24 * 60 * 60 * 1000
+          ),
+          category: campaign.category || "Technology",
+          status:
+            campaign.status === "LIVE"
+              ? ("active" as const)
+              : ("active" as const),
+          dbStatus: campaign.status as "LIVE" | "SUCCESS" | "FAILED",
+          totalRaised: "0", // Will be calculated from blockchain data
+          contractAddress: campaign.contractAddress,
+          creatorAvatar: "/placeholder.svg?height=40&width=40",
+          hasPerks: true,
+        }));
+        setCampaigns(campaignsWithDbData);
+        setFilteredCampaigns(campaignsWithDbData);
+        setLoading(false);
+        return;
+      }
 
-      // Fetch real-time prices from blockchain for each campaign
-      const campaignsWithPrices = await Promise.all(
+      console.log("🔄 Fetching blockchain data for campaigns...");
+      // Fetch real-time data from blockchain for each campaign
+      const campaignsWithBlockchainData = await Promise.all(
         result.campaigns.map(async (campaign: any) => {
+          // Initialize with database values
+          const dbPrice = Number(campaign.startPrice);
           let currentPrice = campaign.startPrice;
-          let formattedPrice = "0.1"; // Fallback
+          let formattedPrice = dbPrice.toFixed(2);
+          let supporters = campaign.totalEverMinted || 0;
+          let totalRaised = "0";
+
+          console.log(`📊 [${campaign.name}] DB Values:`, {
+            startPrice: campaign.startPrice,
+            totalEverMinted: campaign.totalEverMinted,
+            contractAddress: campaign.contractAddress,
+          });
 
           try {
-            // Get current price from blockchain
-            const priceFromChain = await publicClient.readContract({
-              address: campaign.contractAddress as `0x${string}`,
-              abi: CampaignNFTABI,
-              functionName: "getCurrentPriceToMint",
-            });
+            // Fetch multiple contract data in parallel with better error handling
+            const [priceFromChain, totalEverMinted] = await Promise.all([
+              publicClient
+                .readContract({
+                  address: campaign.contractAddress as `0x${string}`,
+                  abi: CampaignNFTABI,
+                  functionName: "getCurrentPriceToMint",
+                })
+                .catch((err) => {
+                  console.warn(
+                    `⚠️ Price fetch failed for ${campaign.name}:`,
+                    err.message || err
+                  );
+                  // Use DB value as fallback (already in proper decimal format)
+                  return BigInt(Math.floor(dbPrice * 1000000));
+                }),
+              publicClient
+                .readContract({
+                  address: campaign.contractAddress as `0x${string}`,
+                  abi: CampaignNFTABI,
+                  functionName: "totalEverMinted",
+                })
+                .catch((err) => {
+                  console.warn(
+                    `⚠️ TotalEverMinted fetch failed for ${campaign.name}:`,
+                    err.message || err
+                  );
+                  return BigInt(campaign.totalEverMinted || 0);
+                }),
+            ]);
 
             // Format price (assuming 6 decimals for PYUSD)
             const priceNum = Number(priceFromChain) / 1000000;
             formattedPrice = priceNum.toFixed(2);
             currentPrice = formattedPrice;
+
+            // Get actual supporter count from blockchain
+            supporters = Number(totalEverMinted);
+
+            // Calculate total raised: price * supporters
+            totalRaised = (priceNum * supporters).toFixed(2);
+
+            console.log(`✅ [${campaign.name}] Blockchain Values:`, {
+              priceFromChain: String(priceFromChain),
+              priceNum,
+              formattedPrice,
+              totalEverMinted: String(totalEverMinted),
+              supporters,
+              totalRaised,
+            });
           } catch (error) {
             console.error(
-              `Failed to fetch price for campaign ${campaign.name}:`,
+              `❌ Failed to fetch blockchain data for campaign ${campaign.name}:`,
               error
             );
-            // Use startPrice as fallback
-            const fallbackPrice = Number(campaign.startPrice) / 1000000;
-            formattedPrice = fallbackPrice.toFixed(2);
+            // Use database values as fallback
+            formattedPrice = dbPrice.toFixed(2);
             currentPrice = formattedPrice;
+            supporters = campaign.totalEverMinted || 0;
+            // Calculate total raised from price and supporters
+            totalRaised = (dbPrice * supporters).toFixed(2);
+
+            console.log(`🔄 [${campaign.name}] Using DB Fallback:`, {
+              price: formattedPrice,
+              supporters,
+              totalRaised,
+            });
           }
 
           return {
@@ -137,8 +229,8 @@ export function CampaignGrid({
             description: campaign.description,
             image: campaign.imageUrl || "/placeholder.svg?height=200&width=300",
             currentPrice,
-            currency: "PYUSD", // Display name instead of contract address
-            supporters: campaign.totalEverMinted || 0,
+            currency: "PYUSD",
+            supporters,
             minRequiredSales: campaign.minRequiredSales,
             maxSupply: campaign.maxSupply,
             endDate: new Date(
@@ -150,9 +242,7 @@ export function CampaignGrid({
                 ? ("active" as const)
                 : ("active" as const),
             dbStatus: campaign.status as "LIVE" | "SUCCESS" | "FAILED",
-            totalRaised: campaign.totalEarnedByCreator
-              ? (Number(campaign.totalEarnedByCreator) / 1000000).toFixed(2)
-              : "0",
+            totalRaised,
             contractAddress: campaign.contractAddress,
             creatorAvatar: "/placeholder.svg?height=40&width=40",
             hasPerks: true,
@@ -160,15 +250,18 @@ export function CampaignGrid({
         })
       );
 
-      setCampaigns(campaignsWithPrices);
-      setFilteredCampaigns(campaignsWithPrices);
+      console.log("✅ All blockchain data fetched, updating state");
+      setCampaigns(campaignsWithBlockchainData);
+      setFilteredCampaigns(campaignsWithBlockchainData);
     } catch (err) {
       console.error("Error fetching campaigns:", err);
       setError(
         err instanceof Error ? err.message : "Failed to fetch campaigns"
       );
     } finally {
+      // Only set loading to false after ALL blockchain data is fetched
       setLoading(false);
+      console.log("✅ Campaign loading complete");
     }
   };
 

@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function ExplorePage() {
   const { setFrameReady, isFrameReady } = useMiniKit();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -42,14 +45,27 @@ export default function ExplorePage() {
         </div>
 
         {/* Search and Filters */}
-        <SearchFilters />
+        <SearchFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+        />
 
         {/* Campaign Grid */}
-        <CampaignGrid />
+        <CampaignGrid
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+        />
       </main>
 
       <MobileNav />
     </div>
   );
 }
-

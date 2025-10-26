@@ -12,10 +12,17 @@ export async function POST(request: NextRequest) {
       description,
       category,
       priceIncrement,
+      startingPrice,
+      startPrice,
       paymentToken,
       creatorAddress,
       contractAddress,
-      timestamp, // Campaign end timestamp from blockchain
+      timestamp,
+      duration,
+      fundingGoal,
+      minRequiredSales,
+      maxSupply,
+      maxItems,
       imageUrl,
     } = body;
 
@@ -35,10 +42,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Parse price values (accept different field names for flexibility)
+    const finalStartPrice = parseFloat(startingPrice || startPrice || "3.0");
+    const finalPriceIncrement = parseFloat(priceIncrement || "0.3");
+    const finalMaxItems = parseInt(maxSupply || maxItems || "1000");
+    const finalMinRequiredSales = parseInt(
+      minRequiredSales || fundingGoal || "10"
+    );
+
     // Convert timestamp to Date (timestamp is in seconds, Date expects milliseconds)
     const endDate = timestamp
       ? new Date(Number(timestamp) * 1000)
+      : duration
+      ? new Date(Date.now() + Number(duration) * 24 * 60 * 60 * 1000)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    console.log("📝 Parsed campaign values:", {
+      finalStartPrice,
+      finalPriceIncrement,
+      finalMaxItems,
+      finalMinRequiredSales,
+      endDate,
+    });
 
     // Create or update campaign in database using upsert
     const campaign = await prisma.dRSeries.upsert({
@@ -48,10 +73,10 @@ export async function POST(request: NextRequest) {
       update: {
         name,
         symbol,
-        maxItems: 1000, // Default max items
-        minRequiredSales: 10, // Default min required
-        startPrice: 3.0, // Default start price in PYUSD
-        priceIncrement: parseFloat(priceIncrement) || 0.3,
+        maxItems: finalMaxItems,
+        minRequiredSales: finalMinRequiredSales,
+        startPrice: finalStartPrice,
+        priceIncrement: finalPriceIncrement,
         presaleTimestamp: endDate,
         creatorAddress,
         paymentToken: paymentToken || "PYUSD",
@@ -61,10 +86,10 @@ export async function POST(request: NextRequest) {
       create: {
         name,
         symbol,
-        maxItems: 1000,
-        minRequiredSales: 10,
-        startPrice: 3.0,
-        priceIncrement: parseFloat(priceIncrement) || 0.3,
+        maxItems: finalMaxItems,
+        minRequiredSales: finalMinRequiredSales,
+        startPrice: finalStartPrice,
+        priceIncrement: finalPriceIncrement,
         presaleTimestamp: endDate,
         creatorAddress,
         paymentToken: paymentToken || "PYUSD",
@@ -132,6 +157,8 @@ export async function GET() {
         maxItems: campaign.maxItems,
         minRequiredSales: campaign.minRequiredSales,
         startPrice: campaign.startPrice,
+        startPriceType: typeof campaign.startPrice,
+        startPriceToString: campaign.startPrice.toString(),
         priceIncrement: campaign.priceIncrement,
         presaleTimestamp: campaign.presaleTimestamp,
         totalEverMinted: campaign.totalEverMinted,
@@ -156,11 +183,12 @@ export async function GET() {
         priceIncrement: campaign.priceIncrement.toString(),
         paymentToken: campaign.paymentToken,
         creatorAddress: campaign.creatorAddress,
-        contractAddress: campaign.contractAddress, // Add missing contract address
+        contractAddress: campaign.contractAddress,
         status: campaign.status,
         createdAt: campaign.createdAt,
         endDate: campaign.presaleTimestamp,
         imageUrl: campaign.imageUrl,
+        totalEverMinted: campaign.totalEverMinted || 0,
       })),
     });
   } catch (error) {

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import Image from "next/image";
 
 export function Header() {
   const pathname = usePathname();
@@ -20,7 +21,7 @@ export function Header() {
       description: "Explore campaigns",
     },
     {
-      name: "Create",
+      name: "Launch",
       href: "/create",
       icon: Plus,
       description: "Launch a product",
@@ -45,11 +46,12 @@ export function Header() {
             className="flex items-center space-x-2 sm:space-x-3 group"
           >
             <div className="relative">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-sm sm:text-base lg:text-lg">
-                  PS
-                </span>
-              </div>
+              <Image
+                src="/logo.jpg"
+                alt="ProductStarter"
+                width={32}
+                height={32}
+              />
               <div className="absolute -inset-1 bg-gradient-to-br from-primary to-primary/60 rounded-xl lg:rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
               {/* Glow effect */}
               <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 to-transparent rounded-xl lg:rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>

@@ -55,7 +55,6 @@ export function CreateCampaignForm() {
     description: "",
     category: "",
     fundingGoal: "",
-    maxSupply: "",
     duration: "",
     durationUnit: "days",
     startingPrice: "",
@@ -168,7 +167,7 @@ export function CreateCampaignForm() {
         name: formData.name,
         symbol: formData.symbol,
         minRequiredSales: parseInt(formData.fundingGoal),
-        maxItems: parseInt(formData.maxSupply),
+        maxItems: 1000, // Default max supply
         presaleTimestamp,
         startPrice: formData.startingPrice,
         priceIncrement: formData.priceIncrement,
@@ -478,24 +477,6 @@ export function CreateCampaignForm() {
               />
               <p className="text-xs text-muted-foreground">
                 Minimum number of supporters needed to succeed
-              </p>
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="maxSupply" className="text-base font-medium">
-                Maximum NFT Supply <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="maxSupply"
-                type="number"
-                placeholder="1000"
-                min="1"
-                value={formData.maxSupply}
-                onChange={(e) => updateFormData("maxSupply", e.target.value)}
-                className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-300"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Total NFT receipts that can be minted
               </p>
             </div>
           </div>

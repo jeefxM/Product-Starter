@@ -29,27 +29,6 @@ export default function HomePage() {
       <Header />
 
       <main className="container py-6 pb-24 md:pb-10">
-        {/* Simple Header with CTA */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              ProductStarter
-            </h1>
-            <p className="text-muted-foreground">
-              An innovation discovery platform
-            </p>
-          </div>
-          <Link href="/create">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300 group"
-            >
-              <Plus className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
-              Launch Product
-            </Button>
-          </Link>
-        </div>
-
         {/* Campaigns Section */}
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -545,6 +545,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
     addSuffix: true,
   });
 
+  console.log("time", timeRemaining);
   // Check if campaign is successful
   const isSuccessful = campaignDbStatus === "SUCCESS" || progress >= 100;
   const isCreator =
@@ -976,7 +977,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
+                  {/* <div className="flex items-center justify-between ">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       {isSuccessful ? (
                         <>
@@ -986,19 +987,10 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                           </span>
                         </>
                       ) : (
-                        <>
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {timeRemaining.replace("in ", "")} remaining
-                          </span>
-                        </>
+                        <></>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Target className="w-4 h-4" />
-                      <span>{campaign.maxSupply} max supply</span>
-                    </div>
-                  </div>
+                  </div> */}
                 </div>
               </CardContent>
             </Card>
@@ -1564,12 +1556,7 @@ export function CampaignDetails({ campaignId }: CampaignDetailsProps) {
                           </p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/50">
-                          <p className="text-lg font-bold">
-                            {timeRemaining.replace("in ", "").split(" ")[0]}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Days Left
-                          </p>
+                          <p className="text-lg font-bold">{timeRemaining}</p>
                         </div>
                       </div>
                     </div>

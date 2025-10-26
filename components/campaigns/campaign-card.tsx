@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import { formatTimeRemaining } from "@/lib/time-utils";
 import { useSupportCampaign } from "@/hooks/use-support-campaign";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +31,7 @@ import { useEffect, useState, useRef } from "react";
 import { TokenApprovalModal } from "./token-approval-modal";
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { cn } from "@/lib/utils";
+import { formatDistance, formatDistanceToNow } from "date-fns";
 
 interface Campaign {
   id: string;
@@ -75,10 +75,27 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const isHandlingSupportRef = useRef(false);
 
   const progress = (campaign.supporters / campaign.minRequiredSales) * 100;
+
+  // Debug log to see campaign data
+  useEffect(() => {
+    console.log(`🎴 [CampaignCard: ${campaign.name}]`, {
+      supporters: campaign.supporters,
+      minRequiredSales: campaign.minRequiredSales,
+      progress: progress.toFixed(2) + "%",
+      currentPrice: campaign.currentPrice,
+    });
+  }, [
+    campaign.supporters,
+    campaign.minRequiredSales,
+    campaign.currentPrice,
+    campaign.name,
+    progress,
+  ]);
   // Use custom time formatting for better accuracy with minutes/hours
   const timeRemaining = formatDistanceToNow(campaign.endDate, {
     addSuffix: true,
   });
+  console.log("timeRemaining", campaign);
 
   // Check if campaign is successful or failed
   const isSuccessful = campaign.dbStatus === "SUCCESS" || progress >= 100;
@@ -460,7 +477,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                   Failed ❌
                 </span>
               ) : (
-                timeRemaining.replace("in ", "")
+                timeRemaining
               )}
             </span>
           </div>
