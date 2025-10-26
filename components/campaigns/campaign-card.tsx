@@ -265,24 +265,6 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               </div>
             </div>
 
-            {/* Success Overlay */}
-            {isSuccessful && (
-              <div className="absolute inset-0 bg-gradient-to-t from-green-600/20 via-green-500/10 to-transparent flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-full p-3 shadow-lg animate-pulse">
-                  <Trophy className="w-8 h-8 text-yellow-500" />
-                </div>
-              </div>
-            )}
-
-            {/* Failure Overlay */}
-            {isFailed && (
-              <div className="absolute inset-0 bg-gradient-to-t from-red-600/20 via-red-500/10 to-transparent flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-full p-3 shadow-lg">
-                  <XCircle className="w-8 h-8 text-red-500" />
-                </div>
-              </div>
-            )}
-
             {/* Quick Actions */}
             <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <Link href={`/campaign/${campaign.id}`}>
@@ -344,7 +326,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             >
               <div
                 className={cn(
-                  "text-lg font-bold",
+                  "text-lg font-bold flex items-center gap-2 justify-center",
                   isSuccessful
                     ? "text-white-600 dark:text-white-400"
                     : isFailed
@@ -352,7 +334,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
                     : "text-primary"
                 )}
               >
-                {campaign.currentPrice}
+                {campaign.currentPrice}{" "}
+                <Image src="/pyusd.png" alt="PYUSD" width={16} height={16} />
               </div>
               <div className="text-xs text-muted-foreground">
                 {isSuccessful
